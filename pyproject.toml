@@ -1,0 +1,28 @@
+
+[tool.poetry]
+name = "lib-avsec"
+version = "0.1.0-alpha.1"
+description = "Security analysis routines for autonomous vehicles"
+authors = ["Spencer Hallyburton <spencer.hallyburton@duke.edu>"]
+readme = "README.md"
+license = "MIT"
+homepage = "https://cpsl.pratt.duke.edu/"
+repository = "https://github.com/avstack-lab/lib-avsec"
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Science/Research",
+]
+keywords = ["security", "perception", "autonomous vehicles"]
+packages = [{include = "avsec"}]
+
+[tool.poetry.dependencies]
+python = "~3.8"
+numpy = "^1.19"
+lib-avstack-core = { path = "../lib-avstack-core", develop = true }
+lib-avstack-api = { path = "../lib-avstack-api", develop = true }
+
+[build-system]
+requires = [
+    "poetry-core",
+]
+build-backend = "poetry.core.masonry.api"

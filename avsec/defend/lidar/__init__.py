@@ -4,32 +4,34 @@
 # @Last modified by:   spencer
 # @Last modified time: 2021-09-09
 
-import sys
 import os
 import shutil
-from multiprocessing import Pool, cpu_count
-from functools import partial
-from tqdm import tqdm
+import sys
 from copy import copy, deepcopy
+from functools import partial
+from multiprocessing import Pool, cpu_count
 
 import numpy as np
+from tqdm import tqdm
 
 
 path = os.path.abspath(__file__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(path)))
 
+from avapi import evaluation
+from avstack.geometry import bbox
+
 # -------------
 # AV utilities
 from avstack.utils import maskfilters
-from avstack.geometry import bbox
 
-from avapi import evaluation
 
 # =================================================
 # DEFENSE CLASSES
 # =================================================
 
-class PerceptionDefense():
+
+class PerceptionDefense:
     def __init__(self, DM, defense_eval_func, defense_name, defense_type):
         """Set up a defense evaluator and type of defense"""
         self.DM = DM
@@ -42,8 +44,10 @@ class PerceptionDefense():
 
     def get_detection_results_from_folder(self, path_to_results, idxs=None):
         """Load detection results from a folder"""
-        res_all, idx_all = self.DM.get_labels_from_directory(dir=path_to_results, idxs=idxs)
-        results = {idx:res for idx, res in zip(idx_all, res_all)}
+        res_all, idx_all = self.DM.get_labels_from_directory(
+            dir=path_to_results, idxs=idxs
+        )
+        results = {idx: res for idx, res in zip(idx_all, res_all)}
         return results
 
     def get_detection_results_from_batch(self):
@@ -53,10 +57,10 @@ class PerceptionDefense():
     def get_write_path(self, result_path, write_path):
         if write_path is None:
             write_path = result_path
-            if 'defense' not in result_path:
-                if write_path.endswith('/'):
+            if "defense" not in result_path:
+                if write_path.endswith("/"):
                     write_path = write_path[:-1]
-                write_path += '-{}_defense'.format(self.defense_name)
+                write_path += "-{}_defense".format(self.defense_name)
         return write_path
 
     def write_detection_results_from_folder(self, results, result_path, write_path):
@@ -76,14 +80,16 @@ class PerceptionDefense():
         """Run defense on a set of information"""
         raise NotImplementedError
 
-    def evaluate_from_folder(self, path_to_results, idxs=None, write=False, write_path=None):
+    def evaluate_from_folder(
+        self, path_to_results, idxs=None, write=False, write_path=None
+    ):
         """Evaluate postprocess lidar defense"""
         results = self.get_detection_results_from_folder(path_to_results, idxs=idxs)
         passed_all = {}
 
         # Check and delete
-        print('Running defense on detection results -- using multiprocess')
-        pool = Pool(min(int(cpu_count()/2), 16))
+        print("Running defense on detection results -- using multiprocess")
+        pool = Pool(min(int(cpu_count() / 2), 16))
         part_func = partial(self.defense_eval_func, self.DM, self.evaluate)
         idxs = [int(idx) for idx in results]
         inputs = [(idx, res) for idx, res in results.items()]
@@ -99,7 +105,9 @@ class PerceptionDefense():
 
         # write detection results
         if write:
-            write_path = self.write_detection_results_from_folder(new_results, path_to_results, write_path)
+            write_path = self.write_detection_results_from_folder(
+                new_results, path_to_results, write_path
+            )
         else:
             write_path = None
 
@@ -141,7 +149,7 @@ def _run_postproc_voting_def(DM, evaluate_func, input):
     idx, (labels_lidar, labels_image) = input
     # calib = DM.get_calibration(idx)
     passed, nvotes = evaluate_func(labels_lidar, labels_image)
-    if len(labels_lidar)==0 or len(passed)==0:
+    if len(labels_lidar) == 0 or len(passed) == 0:
         new_result = []
     else:
         new_result = np.asarray(labels_lidar)[passed]
@@ -157,7 +165,7 @@ def _run_postproc_camera_lidar_def(DM, evaluate_func, input):
 
 class LpdDefense(PerceptionDefense):
     def __init__(self, DM):
-        super().__init__(DM, _run_postproc_lidar_def, 'lpd', 'postprocess')
+        super().__init__(DM, _run_postproc_lidar_def, "lpd", "postprocess")
         self.threshold = 0.8
 
     def evaluate(self, lidar, label, calib):
@@ -167,7 +175,7 @@ class LpdDefense(PerceptionDefense):
 
 class GbscDefense(PerceptionDefense):
     def __init__(self, DM):
-        super().__init__(DM, _run_postproc_lidar_def, 'gbsc', 'postprocess')
+        super().__init__(DM, _run_postproc_lidar_def, "gbsc", "postprocess")
         self.threshold = 0.2
         self.alpha = 0.4
 
@@ -178,7 +186,9 @@ class GbscDefense(PerceptionDefense):
         pass
 
     def evaluate(self, lidar, label, calib):
-        passed, score = GBSC(lidar, label, calib, alpha=self.alpha, threshold=self.threshold)
+        passed, score = GBSC(
+            lidar, label, calib, alpha=self.alpha, threshold=self.threshold
+        )
         return passed, score
 
 
@@ -186,9 +196,10 @@ class ImageLidar3DCheck(PerceptionDefense):
     """
     Post-processing defense that compares detections from camera and lidar
     """
+
     def __init__(self, DM, path_to_im_results, assume_image_good=False):
-        super().__init__(DM, _run_postproc_voting_def, 'imagelidar3d', 'postprocess')
-        self.metric='3D_IoU'
+        super().__init__(DM, _run_postproc_voting_def, "imagelidar3d", "postprocess")
+        self.metric = "3D_IoU"
         self.assume_image_good = assume_image_good
         self.path_to_im_results = path_to_im_results
         if self.assume_image_good:
@@ -197,16 +208,32 @@ class ImageLidar3DCheck(PerceptionDefense):
     def get_detection_results_from_folder(self, path_to_results, idxs=None):
         """overwrite the loading of detections to handle the multiple paths"""
         # Get lidar results
-        res_lidar, idx_all = self.DM.get_labels_from_directory(dir=path_to_results, idxs=idxs)
+        res_lidar, idx_all = self.DM.get_labels_from_directory(
+            dir=path_to_results, idxs=idxs
+        )
         # Get image results
-        assert os.path.exists(self.path_to_im_results), 'Need to create 3D image results at %s'%path_to_im_results
-        res_image, idx_all = self.DM.get_labels_from_directory(dir=self.path_to_im_results, idxs=idxs)
-        assert len(res_lidar)==len(res_image), 'Lidar (%i) and image (%i) results need to have same number of frames'%(len(res_lidar), len(res_image))
-        return {idx:[res_li, res_im] for idx, res_li, res_im in zip(idx_all, res_lidar, res_image)}
+        assert os.path.exists(self.path_to_im_results), (
+            "Need to create 3D image results at %s" % path_to_im_results
+        )
+        res_image, idx_all = self.DM.get_labels_from_directory(
+            dir=self.path_to_im_results, idxs=idxs
+        )
+        assert len(res_lidar) == len(
+            res_image
+        ), "Lidar (%i) and image (%i) results need to have same number of frames" % (
+            len(res_lidar),
+            len(res_image),
+        )
+        return {
+            idx: [res_li, res_im]
+            for idx, res_li, res_im in zip(idx_all, res_lidar, res_image)
+        }
 
     def evaluate(self, labels_lidar, labels_image):
         """evaluate by associating detections"""
-        assignments, A = evaluation.associate_detections_truths(labels_lidar, labels_image, metric=self.metric)
+        assignments, A = evaluation.associate_detections_truths(
+            labels_lidar, labels_image, metric=self.metric
+        )
 
         # Get passed list
         idx_lidar_good = [a[0] for a in assignments]
@@ -215,6 +242,7 @@ class ImageLidar3DCheck(PerceptionDefense):
         if self.assume_image_good:
             raise NotImplementedError
         return passed, nvotes
+
 
 #
 # class LidarMonoMonoVoting_v1():
@@ -336,9 +364,9 @@ class ImageLidar3DCheck(PerceptionDefense):
 
 
 def factory_defense(defense_type, DM):
-    if defense_type.lower() == 'lpd':
+    if defense_type.lower() == "lpd":
         DEF = LpdDefense(DM)
-    elif defense_type.lower() == 'gbsc':
+    elif defense_type.lower() == "gbsc":
         DEF = GbscDefense(DM)
     else:
         raise NotImplementedError
@@ -349,25 +377,35 @@ def factory_defense(defense_type, DM):
 # DEFENSE FUNCTIONS
 # =================================================
 
+
 def GBSC(lidar, label, calib, alpha=0.4, threshold=0.2):
     """Ghostbuster-Shadowcatcher defense function"""
     # Get shadow points
-    shadow_filter = maskfilters.filter_points_in_shadow(lidar, label.box2d, label.box3d, calib)
+    shadow_filter = maskfilters.filter_points_in_shadow(
+        lidar, label.box2d, label.box3d, calib
+    )
 
     # Run anomaly score
-    score = get_shadow_anomaly_score(lidar[shadow_filter,:], label, calib, alpha=alpha)
+    score = get_shadow_anomaly_score(lidar[shadow_filter, :], label, calib, alpha=alpha)
     return score <= threshold, score
 
 
 def LPD(lidar, label, calib, threshold=0.8):
     # Get number of points in frustum (denom)
-    frustum_filter = maskfilters.filter_points_in_image_frustum(lidar, label.box2d, calib)
+    frustum_filter = maskfilters.filter_points_in_image_frustum(
+        lidar, label.box2d, calib
+    )
     npts_frustum = sum(frustum_filter)
 
     # Get number of points behind
     half_box_len = label.box3d.l / 2
-    npts_behind = sum((np.linalg.norm(lidar[frustum_filter,0:3], axis=1) - \
-                   np.linalg.norm(label.box3d.t)) > half_box_len)
+    npts_behind = sum(
+        (
+            np.linalg.norm(lidar[frustum_filter, 0:3], axis=1)
+            - np.linalg.norm(label.box3d.t)
+        )
+        > half_box_len
+    )
 
     # Threshold to say if passed
     if npts_frustum == 0:
@@ -379,7 +417,13 @@ def LPD(lidar, label, calib, threshold=0.8):
     return passed, ratio
 
 
-def compare_3d_detections_image_lidar(detections_image=None, detections_lidar=None, detections_fusion=None, metric='center_dist', radius=5):
+def compare_3d_detections_image_lidar(
+    detections_image=None,
+    detections_lidar=None,
+    detections_fusion=None,
+    metric="center_dist",
+    radius=5,
+):
     """
     Compares the 3D detections from different selections of sensors
 
@@ -396,7 +440,16 @@ def compare_3d_detections_image_lidar(detections_image=None, detections_lidar=No
     """
 
     # Only 2 things should be passed in
-    assert(sum([detections_image is not None, detections_lidar is not None, detections_fusion is not None]) == 2)
+    assert (
+        sum(
+            [
+                detections_image is not None,
+                detections_lidar is not None,
+                detections_fusion is not None,
+            ]
+        )
+        == 2
+    )
 
     # Discover which ones we are comparing
     if detections_image is not None:
@@ -411,18 +464,21 @@ def compare_3d_detections_image_lidar(detections_image=None, detections_lidar=No
 
     # Run assignment algorithm
     assignments, A = evaluation.associate_detections_truths(
-                                    detections=detections_A,
-                                    truths=detections_B,
-                                    metric=metric,
-                                    radius=radius)
+        detections=detections_A, truths=detections_B, metric=metric, radius=radius
+    )
 
     # Return which are consistent and which are inconsistent
     consistent = assignments
-    inconsistent = [detections_A[assignments.unassigned_rows], detections_B[assignments.unassigned_cols]]
+    inconsistent = [
+        detections_A[assignments.unassigned_rows],
+        detections_B[assignments.unassigned_cols],
+    ]
     return consistent, inconsistent
 
 
-def compare_2d_3d_image_bbox(bbox_3d, bbox_2d, calib, only_in_image=False, image_size=[375, 1242]):
+def compare_2d_3d_image_bbox(
+    bbox_3d, bbox_2d, calib, only_in_image=False, image_size=[375, 1242]
+):
     """
     Compare the 3D detection to the 2D detection in image and check consistency
 
@@ -454,7 +510,7 @@ def compare_2d_3d_image_bbox(bbox_3d, bbox_2d, calib, only_in_image=False, image
 
     # TODO: add in threshold calculation on some metric
 
-    return inter, inter/bbox_2d_area, union, union/bbox_2d_area, iou, area_ratio
+    return inter, inter / bbox_2d_area, union, union / bbox_2d_area, iou, area_ratio
 
 
 # =======================================================
@@ -465,6 +521,7 @@ def compare_2d_3d_image_bbox(bbox_3d, bbox_2d, calib, only_in_image=False, image
 # =======================================================
 # Utilities
 # =======================================================
+
 
 def normalize(vec):
     return vec / np.linalg.norm(vec)
@@ -477,13 +534,13 @@ def get_dist_point_line_vec(x_pts, line):
     x_pts -- n x 2
     line -- 2x2 where each line is a column
     """
-    P1 = line[:,0]
-    P2 = line[:,1]
-    x0, y0 = x_pts[:,0], x_pts[:,1]
+    P1 = line[:, 0]
+    P2 = line[:, 1]
+    x0, y0 = x_pts[:, 0], x_pts[:, 1]
     x1, y1 = P1
     x2, y2 = P2
-    numer = np.abs((x2-x1)*(y1-y0) - (x1-x0)*(y2-y1))
-    denom = np.sqrt((x2-x1)**2 + (y2-y1)**2)
+    numer = np.abs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1))
+    denom = np.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2)
     return numer / denom
 
 
@@ -497,26 +554,28 @@ def get_shadow_vectors(label, calib):
     corners_velo_bev = calib.project_velo_to_bev(corners_velo)
 
     # Get BEV geometry of the shadow region
-    slopes = corners_velo_bev[:,0] / corners_velo_bev[:,1]
-    shadow_vectors = [normalize(corners_velo_bev[np.argmax(slopes),:]),
-                      normalize(corners_velo_bev[np.argmin(slopes),:])]
+    slopes = corners_velo_bev[:, 0] / corners_velo_bev[:, 1]
+    shadow_vectors = [
+        normalize(corners_velo_bev[np.argmax(slopes), :]),
+        normalize(corners_velo_bev[np.argmin(slopes), :]),
+    ]
 
     # Compute shadow length
     H_laser = 1.73
     h_obj = label.box3d.t[1]
     shadow_length = label.get_range() * h_obj / max(1e-4, abs(H_laser - h_obj))
     max_shadow = 20
-    shadow_length = min(shadow_length, max_shadow+label.get_range())
+    shadow_length = min(shadow_length, max_shadow + label.get_range())
 
     # Package up vectors in BEV
     # -- 1: start-line top left
     # -- 2: end-line top/bottom left
     # -- 3: end-line bottom/top right
     # -- 4: start-line bottom right
-    v1 = corners_velo_bev[np.argmax(slopes),:]
-    v2 = shadow_length*shadow_vectors[0]
-    v3 = shadow_length*shadow_vectors[1]
-    v4 = corners_velo_bev[np.argmin(slopes),:]
+    v1 = corners_velo_bev[np.argmax(slopes), :]
+    v2 = shadow_length * shadow_vectors[0]
+    v3 = shadow_length * shadow_vectors[1]
+    v4 = corners_velo_bev[np.argmin(slopes), :]
     return np.array([v1, v2, v3, v4]).T
 
 
@@ -529,24 +588,27 @@ def get_shadow_anomaly_score(points_shadow, label, calib, alpha=0.4):
     --end_line = the line definining the maximum length of the shadow region
     """
     shadow_vectors = get_shadow_vectors(label, calib)
-    points_shadow_bev = calib.project_velo_to_bev(points_shadow)[:,:2]
+    points_shadow_bev = calib.project_velo_to_bev(points_shadow)[:, :2]
 
     # Only do in hull points
     in_sub_shadow = bbox.in_hull(points_shadow_bev, shadow_vectors.T)
-    point_sub_shadow_bev = points_shadow_bev[in_sub_shadow,:]
+    point_sub_shadow_bev = points_shadow_bev[in_sub_shadow, :]
     T = point_sub_shadow_bev.shape[0]
 
     if T == 0:
         score = 0
     else:
-        log_inner = np.log(0.5)/alpha
+        log_inner = np.log(0.5) / alpha
 
         # Define lines
-        line_start = shadow_vectors[:,[0,3]]
-        line_end = shadow_vectors[:,[1,2]]
-        line_top = shadow_vectors[:,[0,1]]
-        line_bottom = shadow_vectors[:,[3,2]]
-        line_mid = np.mean(np.concatenate((line_top[:,:,None], line_bottom[:,:,None]), axis=2), axis=2)
+        line_start = shadow_vectors[:, [0, 3]]
+        line_end = shadow_vectors[:, [1, 2]]
+        line_top = shadow_vectors[:, [0, 1]]
+        line_bottom = shadow_vectors[:, [3, 2]]
+        line_mid = np.mean(
+            np.concatenate((line_top[:, :, None], line_bottom[:, :, None]), axis=2),
+            axis=2,
+        )
 
         # Get distances
         x_start = get_dist_point_line_vec(point_sub_shadow_bev, line_start)
@@ -557,9 +619,9 @@ def get_shadow_anomaly_score(points_shadow, label, calib, alpha=0.4):
         x_bound = np.minimum(x_bound_1, x_bound_2)
 
         # Compute weightings
-        w_start = np.exp(log_inner * x_start/(x_start+x_end))
-        w_mid = np.exp(log_inner * x_mid/(x_mid+x_bound))
+        w_start = np.exp(log_inner * x_start / (x_start + x_end))
+        w_mid = np.exp(log_inner * x_mid / (x_mid + x_bound))
         w_min = np.exp(log_inner)
-        score = (sum(w_start*w_mid) - T*w_min**2) / (T*(1-w_min**2))
+        score = (sum(w_start * w_mid) - T * w_min**2) / (T * (1 - w_min**2))
 
     return score

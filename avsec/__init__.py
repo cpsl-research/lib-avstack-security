@@ -8,6 +8,6 @@
 # import percep_attacks.defend
 # import percep_attacks.analyze
 
+import seca.analyze
 import seca.attack
 import seca.defend
-import seca.analyze

@@ -2,17 +2,17 @@ import os
 import pickle
 import random
 
-import avstack
-import avstack.transformations as tforms
+
 import numpy as np
 import scipy.interpolate as si
-from avstack import geometry
-from avstack.utils import maskfilters
-from scipy.ndimage import binary_closing, binary_dilation
+from scipy.ndimage import binary_dilation
 from scipy.spatial import ConvexHull, Delaunay
-from seca.attack.types import Executor
+from avsec.attack.types import Executor
 from sklearn.neighbors import KNeighborsRegressor
 
+from avstack import geometry
+from avstack.geometry import transformations as tforms
+from avstack import maskfilters
 
 """
 info class:

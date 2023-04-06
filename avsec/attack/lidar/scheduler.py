@@ -2,8 +2,8 @@ from copy import copy, deepcopy
 
 import numpy as np
 from avstack import geometry
-from avstack import transformations as tforms
-from seca.attack.types import Scheduler
+from avstack.geometry import transformations as tforms
+from avsec.attack.types import Scheduler
 
 
 class ReplayScheduler(Scheduler):

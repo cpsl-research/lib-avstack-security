@@ -7,8 +7,8 @@
 import argparse
 import time
 
-from seca.attack.lidar import executor, monitor, scheduler
-from seca.attack.types import Attacker
+from avsec.attack.lidar import executor, monitor, scheduler
+from avsec.attack.types import Attacker
 
 
 # ================================================================

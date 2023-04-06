@@ -8,8 +8,8 @@ import os
 import shutil
 
 import numpy as np
-from avapi import datasets
 
+import avapi
 from avsec import defend
 
 
@@ -20,22 +20,20 @@ def load_kitti_data(idx_frame):
     assert (idx_frame == 1) or (idx_frame == 100)
 
     # Kitti path things
-    KOD = datasets.get_dataset_class("KittiObjectDataset")
-    KDM = KOD(KITTI_data_dir, "training")
+    KDM = avapi.kitti.KittiObjectDataset(KITTI_data_dir, "training")
 
     # Make truths and detections
     lidar = KDM.get_lidar(idx_frame)
-    image = KDM.get_image(idx_frame)
-    calib = KDM.get_calibration(idx_frame)
-    labels = KDM.get_labels(idx_frame)
+    image = KDM.get_image(idx_frame, sensor="main_camera")
+    calib = KDM.get_calibration(idx_frame, sensor="main_camera")
+    objects = KDM.get_objects(idx_frame, sensor="main_camera")
 
-    return lidar, image, calib, labels
+    return lidar, image, calib, objects
 
 
 def make_results(screw=False):
     """Make some data in a results folder"""
-    KOD = datasets.get_dataset_class("KittiObjectDataset")
-    KDM = KOD(KITTI_data_dir, "training")
+    KDM = avapi.kitti.KittiObjectDataset(KITTI_data_dir, "training")
 
     res_folder = os.path.join(os.getcwd(), "test_results")
     if os.path.exists(res_folder):
@@ -45,21 +43,21 @@ def make_results(screw=False):
         shutil.rmtree(res_folder + "-lpd_defense")
 
     # Make some test results
-    for idx in KDM.idxs:
-        labels = KDM.get_labels(idx)
+    for frame in KDM.frames:
+        objects = KDM.get_objects(frame, sensor="main_camera")
         if screw:
-            for lab in labels:
-                lab.box3d.t[0] = 1
-                lab.box3d.t[2] = 1
-        KDM.save_labels(labels, res_folder, idx, add_label_folder=False)
+            for obj in objects:
+                obj.box3d.t[0] = 1
+                obj.box3d.t[2] = 1
+        KDM.save_labels(objects, res_folder, frame, add_label_folder=False)
     return res_folder
 
 
 def test_LPD_class_folder_mode():
     """Test the class instantiation of LPD"""
     # Make class
-    KOD = datasets.get_dataset_class("KittiObjectDataset")
-    KDM = KOD(KITTI_data_dir, "training")
+    KDM = avapi.kitti.KittiObjectDataset(KITTI_data_dir, "training")
+
     LPDDEF = defend.lidar.LpdDefense(KDM)
 
     # Evaluate from saved result
@@ -144,7 +142,7 @@ def test_compare_3d_detections():
     consistent, inconsistent = defend.lidar.compare_3d_detections_image_lidar(
         detections_image=det_cam,
         detections_lidar=det_lid,
-        metric="center_dist",
+        metric="distance",
         radius=3,
     )
 
@@ -154,14 +152,15 @@ def test_compare_3d_detections():
     # assert(len(inconsistent[1]) == 1)
 
 
-def test_comapare_2d_3d_image_bbox():
+def test_compare_2d_3d_image_bbox():
     """Test the defense idea of using camera's 2D bbox and projecting 3D to 2D"""
 
     # Get the data
-    lidar, _, calib, labels = load_kitti_data(100)
+    lidar, _, calib, objects = load_kitti_data(100)
 
     # Compare ground truths
-    for lab in labels:
+    for obj in objects:
+        box2d = obj.box3d.project_to_2d_bbox(calib)
         (
             inter,
             inter_ratio,
@@ -170,7 +169,7 @@ def test_comapare_2d_3d_image_bbox():
             iou,
             area_ratio,
         ) = defend.lidar.compare_2d_3d_image_bbox(
-            lab.box3d, lab.box2d, calib, only_in_image=True
+            obj.box3d, box2d, calib, only_in_image=True
         )
         # Tests
         assert inter_ratio > 0.9
@@ -179,9 +178,10 @@ def test_comapare_2d_3d_image_bbox():
         assert (area_ratio > 0.7) and (area_ratio < 1.3)
 
     # Compare no overlaps
-    for lab in labels:
-        lab.box3d.t[0] += 5
-        lab.box3d.t[2] += 5
+    for obj in objects:
+        obj.box3d.t[0] += 5
+        obj.box3d.t[2] += 5
+        box2d = obj.box3d.project_to_2d_bbox(calib)
         (
             inter,
             inter_ratio,
@@ -190,7 +190,7 @@ def test_comapare_2d_3d_image_bbox():
             iou,
             area_ratio,
         ) = defend.lidar.compare_2d_3d_image_bbox(
-            lab.box3d, lab.box2d, calib, only_in_image=True
+            obj.box3d, box2d, calib, only_in_image=True
         )
         # Tests
         assert inter_ratio == 0

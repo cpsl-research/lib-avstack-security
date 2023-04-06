@@ -23,6 +23,7 @@ lib-avstack-api = { path = "../lib-avstack-api", develop = true }
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"
+seaborn = "^0.12.2"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7"

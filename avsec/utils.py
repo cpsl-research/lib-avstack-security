@@ -1,5 +1,5 @@
 import numpy as np
-from seca import analysis
+from avsec import analysis
 
 
 def fp_str(overbaseline=True, style="new"):

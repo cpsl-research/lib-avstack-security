@@ -5,9 +5,6 @@
 # @Last modified time: 2021-09-09
 
 import os
-import shutil
-import sys
-from copy import copy, deepcopy
 from functools import partial
 from multiprocessing import Pool, cpu_count
 
@@ -20,10 +17,8 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(path)))
 
 from avapi import evaluation
 from avstack.geometry import bbox
-
-# -------------
-# AV utilities
-from avstack.utils import maskfilters
+import avstack
+from avstack import maskfilters
 
 
 # =================================================
@@ -244,125 +239,6 @@ class ImageLidar3DCheck(PerceptionDefense):
         return passed, nvotes
 
 
-#
-# class LidarMonoMonoVoting_v1():
-#     """
-#     Specific defense technique comparing LiDAR and two 3D-from-mono algorithms
-#
-#     e.g., use --Frustum Pointnet (3D from Fusion)
-#               --Pseudo-LiDAR (3D from Mono)
-#               --3D-Deepbox (3D from Mono)
-#
-#     Particularly useful to guard against attacks on LiDAR with an unattacked camera module
-#     """
-#     def __init__(self):
-#         super().__init__()
-#
-#     def merge_multiple_detections(self, lidar_det=None, mono1_det=None, mono2_det=None):
-#         # One must be populated
-#         if lidar_det is not None:
-#             new_det = lidar_det
-#         elif (mono1_det is not None) or (mono2_det is not None):
-#             method = 'first'
-#             if method == 'first':
-#                 new_det = mono1_det
-#             elif method == 'second':
-#                 new_det = mono2_det
-#             elif method == 'center_avg':
-#                 new_det = deepcopy(mono1_det)
-#                 new_det.box3d.t = (new_det.box3d.t + mono2_det.box3d.t) / 2
-#             else:
-#                 raise NotImplementedError
-#         else:
-#             raise RuntimeError
-#             new_det = None
-#
-#         return new_det
-#
-#     def test(self, lidar_dets, mono1_dets, mono2_dets, allow_chain_overlap=True):
-#         """
-#         Main test routine for the defense
-#
-#         NOTE: THIS IS VERY UNOPTIMIZED AT THE MOMENT. OPTIMIZATION COMES LATER
-#         NOTE: HAVE NOT DECIDED WHETHER TO REMOVE FROM BUFFER ON ASSIGNMENT OR TO KEEP HANGING AROUND FOR LATER....
-#
-#         INPUTS:
-#         --lidar_dets --> list of detections from lidar
-#         --mono1_dets --> list of detections from first mono alg
-#         --mono2_dets --> list of detections from second mono alg
-#         --allow_chain_overlap --> boolean of whether to allow chained overlaps
-#         (True) i.e., associative property, or to force >=3 overlaps to all have to overlap with each other (False)
-#
-#         Idea is to go through LiDAR detections first and determine mono
-#         overlaps. Then go through remaining mono detections.
-#         """
-#         assert(allow_chain_overlap)  # for now...
-#
-#         # Data structures for outcomes
-#         res_valid = []
-#         res_fp = []
-#
-#         # In unoptimized fashion, just pre-compute all association matrices
-#         assignments_lidar_mono1, idx_solo_lidar_vs_mono1, idx_solo_mono1_vs_lidar, A1 = \
-#             eval.associate_detections_truths(lidar_dets, mono1_dets, metric='3D_IoU')
-#
-#         assignments_lidar_mono2, idx_solo_lidar_vs_mono2, idx_solo_mono2_vs_lidar, A2 = \
-#             eval.associate_detections_truths(lidar_dets, mono2_dets, metric='3D_IoU')
-#
-#         assignments_mono1_mono2, idx_solo_mono1_vs_mono2, idx_solo_mono2_vs_mono1, A3 = \
-#                         eval.associate_detections_truths(mono1_dets, mono2_dets, metric='3D_IoU')
-#
-#         # Now loop------
-#         for i, li_det in enumerate(lidar_dets):
-#             # Check if we have overlaps
-#             overlap_1 = i not in idx_solo_lidar_vs_mono1
-#             overlap_2 = i not in idx_solo_lidar_vs_mono2
-#
-#             # Get overlap object
-#             if overlap_1:
-#                 mono1_overlap = mono1_dets[dict(assignments_lidar_mono1)[i]]
-#             else:
-#                 mono1_overlap = None
-#
-#             if overlap_2:
-#                 mono2_overlap = mono2_dets[dict(assignments_lidar_mono2)[i]]
-#             else:
-#                 mono2_overlap = None
-#
-#             # Get string
-#             if overlap_1 and overlap_2:
-#                 merge_str = 'all'
-#             elif overlap_1 or overlap_2:
-#                 merge_str = 'lidar_and_mono{}'.format(1 if overlap_1 else 2)
-#
-#             # Append result
-#             if overlap_1 or overlap_2:
-#                 det = self.merge_multiple_detections(lidar_det=li_det,
-#                                                      mono1_det=mono1_overlap,
-#                                                      mono2_det=mono2_overlap)
-#                 res_valid.append((det, merge_str))
-#             else:
-#                 res_fp.append((li_det, 'lidar'))
-#
-#         # Go through first mono detections that didn't align with lidar
-#         for i_mon1 in idx_solo_mono1_vs_lidar:
-#             if i_mon1 in idx_solo_mono1_vs_mono2:
-#                 res_fp.append((mono1_dets[i_mon1], 'mono1'))
-#             else:
-#                 # Merge
-#                 i_mon2 = dict(assignments_mono1_mono2)[i_mon1]
-#                 det = self.merge_multiple_detections(mono1_det=mono1_dets[i_mon1],
-#                                                      mono2_det=mono2_dets[i_mon2])
-#                 res_valid.append((det, 'mono1_and_mono2'))
-#
-#         # Only left are invalid mono2 detections
-#         for i in idx_solo_mono2_vs_lidar:
-#             if i in idx_solo_mono2_vs_mono1:
-#                 res_fp.append((mono2_dets[i], 'mono2'))
-#
-#         return res_valid, res_fp
-
-
 def factory_defense(defense_type, DM):
     if defense_type.lower() == "lpd":
         DEF = LpdDefense(DM)
@@ -378,31 +254,33 @@ def factory_defense(defense_type, DM):
 # =================================================
 
 
-def GBSC(lidar, label, calib, alpha=0.4, threshold=0.2):
+def GBSC(lidar, object, calib, alpha=0.4, threshold=0.2):
     """Ghostbuster-Shadowcatcher defense function"""
     # Get shadow points
+    box2d = object.box3d.project_to_2d_bbox(calib)
     shadow_filter = maskfilters.filter_points_in_shadow(
-        lidar, label.box2d, label.box3d, calib
+        lidar, box2d, object.box3d, calib
     )
 
     # Run anomaly score
-    score = get_shadow_anomaly_score(lidar[shadow_filter, :], label, calib, alpha=alpha)
+    score = get_shadow_anomaly_score(lidar[shadow_filter, :], object, calib, alpha=alpha)
     return score <= threshold, score
 
 
-def LPD(lidar, label, calib, threshold=0.8):
+def LPD(lidar, object, calib, threshold=0.8):
     # Get number of points in frustum (denom)
+    box2d = object.box3d.project_to_2d_bbox(calib)
     frustum_filter = maskfilters.filter_points_in_image_frustum(
-        lidar, label.box2d, calib
+        lidar, box2d, calib
     )
     npts_frustum = sum(frustum_filter)
 
     # Get number of points behind
-    half_box_len = label.box3d.l / 2
+    half_box_len = object.box3d.l / 2
     npts_behind = sum(
         (
             np.linalg.norm(lidar[frustum_filter, 0:3], axis=1)
-            - np.linalg.norm(label.box3d.t)
+            - np.linalg.norm(object.box3d.t)
         )
         > half_box_len
     )
@@ -421,7 +299,7 @@ def compare_3d_detections_image_lidar(
     detections_image=None,
     detections_lidar=None,
     detections_fusion=None,
-    metric="center_dist",
+    metric="distance",
     radius=5,
 ):
     """
@@ -463,9 +341,13 @@ def compare_3d_detections_image_lidar(
         detections_B = detections_fusion
 
     # Run assignment algorithm
-    assignments, A = evaluation.associate_detections_truths(
-        detections=detections_A, truths=detections_B, metric=metric, radius=radius
-    )
+    if metric.lower() == "iou":
+        A = avstack.modules.assignment.build_A_from_iou(detections_A, detections_B)
+    elif metric.lower() == "distance":
+        A = avstack.modules.assignment.build_A_from_dist(detections_A, detections_B, radius=radius)
+    else:
+        raise NotImplementedError(metric)
+    assignments = avstack.modules.assignment.gnn_single_frame_assign(A, cost_threshold=0)
 
     # Return which are consistent and which are inconsistent
     consistent = assignments
@@ -500,7 +382,7 @@ def compare_2d_3d_image_bbox(
         ymin = max(0, bbox_2d_from_3d.box2d[1])
         xmax = max(0, min(image_size[1], bbox_2d_from_3d.box2d[2]))
         ymax = max(0, min(image_size[0], bbox_2d_from_3d.box2d[3]))
-        bbox_2d_from_3d = bbox.Box2D([xmin, ymin, xmax, ymax])
+        bbox_2d_from_3d = bbox.Box2D([xmin, ymin, xmax, ymax], calibration=calib)
 
     # Compare the detections
     inter = bbox.box_intersection(bbox_2d.box2d, bbox_2d_from_3d.box2d)

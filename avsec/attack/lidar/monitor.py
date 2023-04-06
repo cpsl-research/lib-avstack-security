@@ -5,18 +5,16 @@
 # @Last Modified time: 2022-09-16
 
 import math
-from copy import copy, deepcopy
+from copy import deepcopy
 from functools import partial
 
 import numpy as np
-from avstack import GroundTruthInformation, calibration, geometry, sensors
-from avstack import transformations as tforms
+from avstack import calibration, geometry, sensors, maskfilters
 from avstack.datastructs import DataContainer
 from avstack.modules import perception, tracking
-from avstack.modules.perception.detections import BoxDetection, CentroidDetection
-from avstack.modules.perception.object2dbev import Lidar2dCentroidDetector
-from avstack.utils import maskfilters, mean_confidence_interval
-from seca.attack.types import Monitor
+from avstack.modules.perception.detections import BoxDetection
+from avstack.utils import mean_confidence_interval
+from avsec.attack.types import Monitor
 
 
 def sigmoid(x):

@@ -1,2 +1,2 @@
-import seca.attack.image
-import seca.attack.lidar
+import avsec.attack.image
+import avsec.attack.lidar

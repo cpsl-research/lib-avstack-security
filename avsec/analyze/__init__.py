@@ -6,14 +6,12 @@
 
 import os
 import pickle
-import sys
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 import seaborn as sns
-from tqdm import tqdm
 
 
 # Add paths
@@ -21,7 +19,7 @@ ROOT_DIR = os.path.dirname(os.getcwd())
 BASE_DIR = os.path.dirname(ROOT_DIR)
 
 # Import AV utils
-from avapi import evaluation, visualize
+from avapi import evaluation
 
 
 # ========================================================

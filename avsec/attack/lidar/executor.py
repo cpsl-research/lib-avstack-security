@@ -10,6 +10,7 @@ from scipy.spatial import ConvexHull, Delaunay
 from avsec.attack.types import Executor
 from sklearn.neighbors import KNeighborsRegressor
 
+import avstack
 from avstack import geometry
 from avstack.geometry import transformations as tforms
 from avstack import maskfilters

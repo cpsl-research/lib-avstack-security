@@ -7,9 +7,8 @@
 import os
 import shutil
 
-import numpy as np
-
 import avapi
+import numpy as np
 from avsec import defend
 
 

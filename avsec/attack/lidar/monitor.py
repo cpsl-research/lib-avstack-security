@@ -9,12 +9,12 @@ from copy import deepcopy
 from functools import partial
 
 import numpy as np
-from avstack import calibration, geometry, sensors, maskfilters
+from avsec.attack.types import Monitor
+from avstack import calibration, geometry, maskfilters, sensors
 from avstack.datastructs import DataContainer
 from avstack.modules import perception, tracking
 from avstack.modules.perception.detections import BoxDetection
 from avstack.utils import mean_confidence_interval
-from avsec.attack.types import Monitor
 
 
 def sigmoid(x):

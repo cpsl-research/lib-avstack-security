@@ -15,10 +15,10 @@ from tqdm import tqdm
 path = os.path.abspath(__file__)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(path)))
 
-from avapi import evaluation
-from avstack.geometry import bbox
 import avstack
+from avapi import evaluation
 from avstack import maskfilters
+from avstack.geometry import bbox
 
 
 # =================================================

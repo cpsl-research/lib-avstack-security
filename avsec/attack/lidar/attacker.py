@@ -4,9 +4,6 @@
 # @Last Modified by:   spencer@primus
 # @Last Modified time: 2022-09-16
 
-import argparse
-import time
-
 from avsec.attack.lidar import executor, monitor, scheduler
 from avsec.attack.types import Attacker
 
@@ -27,6 +24,14 @@ def get_sensor_details(dataset):
     else:
         raise NotImplementedError(dataset)
     return sensor_name, sensor_rate
+
+
+class PassthroughAttacker(Attacker):
+    def __init__(self, dataset='kitti', *args, **kwargs):
+        monitor_ = monitor.PassthroughMonitor()
+        scheduler_ = scheduler.PassthroughScheduler()
+        executor_ = executor.PassthroughExecutor(*get_sensor_details(dataset))
+        super().__init__(monitor_, scheduler_, executor_)
 
 
 class FalsePositiveObjectAttacker(Attacker):
@@ -131,30 +136,3 @@ class FrustumTranslateAttacker(Attacker):
         )
         executor_ = executor.FrustumTranslateExecutor(*get_sensor_details(dataset))
         super().__init__(monitor_, scheduler_, executor_)
-
-
-class PollingAttacker:
-    def __init__(self, attacker_name, HOST, PORT) -> None:
-        pass
-
-    def poll(self):
-        while True:
-            time.sleep(0.05)
-            pass
-
-
-def main(args):
-    # -- start up attacker
-
-    # -- wait in a polling loop
-    raise NotImplementedError
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument(
-        "config_path", type=str, help="Path to the attacker configuration"
-    )
-
-    args = parser.parse_args()
-    main(args)

@@ -1,3 +1,5 @@
+import numpy as np
+
 # ========================================================
 # END-TO-END ATTACK LOGIC
 # ========================================================
@@ -70,7 +72,10 @@ class Scheduler:
         self.framerate = framerate
         self.n_frames_burnin = round(dt_burnin * framerate)
         self.n_frames_stable = round(dt_stable * framerate)
-        self.n_frames_attack = round(dt_attack * framerate)
+        try:
+            self.n_frames_attack = round(dt_attack * framerate)
+        except OverflowError:
+            self.n_frames_attack = np.inf
         assert self.n_frames_burnin >= 0
         assert self.n_frames_stable >= 0
         assert self.n_frames_attack >= 0

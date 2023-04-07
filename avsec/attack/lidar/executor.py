@@ -262,6 +262,14 @@ class ReplayExecutor(Executor):
         return data, diagnostics
 
 
+class PassthroughExecutor(Executor):
+    def __init__(self, sensor_name, sensor_rate):
+        super().__init__(sensor_name, sensor_rate)
+
+    def _manipulate(self, data, info):
+        return data, {}
+
+
 class ReverseReplayExecutor(ReplayExecutor):
     def __init__(self, sensor_name, sensor_rate) -> None:
         super().__init__(sensor_name, sensor_rate, reverse=True)

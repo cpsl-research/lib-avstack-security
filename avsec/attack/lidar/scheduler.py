@@ -6,6 +6,17 @@ from avstack import geometry
 from avstack.geometry import transformations as tforms
 
 
+class PassthroughScheduler(Scheduler):
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(dt_burnin=0, dt_stable=0, dt_attack=np.inf, framerate=10)
+    
+    def _schedule_stable(self, info):
+        return info, {}
+    
+    def _schedule_attack(self, info):
+        return info, {}
+
+
 class ReplayScheduler(Scheduler):
     """Replay the sensor data
 

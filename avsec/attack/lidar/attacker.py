@@ -62,18 +62,19 @@ class FalsePositiveObjectAttacker(Attacker):
 
 
 class ReplayAttacker(Attacker):
-    def __init__(self, awareness="none", framerate=10, dataset="kitti", reverse=False):
+    def __init__(self, dt_stable=4, dt_attack=30, dt_repeat=0.5, 
+                 awareness="none", framerate=10, dataset="kitti", reverse=False):
         assert awareness == "none"
-        if dataset == "kitti":
-            dt_stable = 4
-            dt_attack = 30  # any large number
-            dt_repeat = 0.5
-        elif dataset == "nuscenes":
-            dt_stable = 8
-            dt_attack = 30  # any large number
-            dt_repeat = 1
-        else:
-            raise NotImplementedError(dataset)
+        # if dataset == "kitti":
+        #     dt_stable = 4
+        #     dt_attack = 30  # any large number
+        #     dt_repeat = 0.5
+        # elif dataset == "nuscenes":
+        #     dt_stable = 8
+        #     dt_attack = 30  # any large number
+        #     dt_repeat = 1
+        # else:
+            # raise NotImplementedError(dataset)
         monitor_ = monitor.PassthroughMonitor()
         scheduler_ = scheduler.ReplayScheduler(
             dt_burnin=0,

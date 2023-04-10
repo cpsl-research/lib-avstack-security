@@ -35,7 +35,7 @@ class PassthroughAttacker(Attacker):
 
 
 class FalsePositiveObjectAttacker(Attacker):
-    def __init__(self, awareness="none", framerate=10, dataset="kitti"):
+    def __init__(self, trace_directory, awareness="none", framerate=10, dataset="kitti"):
         assert awareness == "none"
         monitor_ = monitor.NaiveSceneMonitor(dataset)
         if dataset == "kitti":
@@ -57,7 +57,7 @@ class FalsePositiveObjectAttacker(Attacker):
             init_range=init_range,
             final_range=final_range,
         )
-        executor_ = executor.PointsAsObjectExecutor(*get_sensor_details(dataset))
+        executor_ = executor.PointsAsObjectExecutor(*get_sensor_details(dataset), trace_directory=trace_directory)
         super().__init__(monitor_, scheduler_, executor_)
 
 
@@ -118,7 +118,7 @@ class RemoveObjectAttacker(Attacker):
 
 class FrustumTranslateAttacker(Attacker):
     def __init__(
-        self, dataset, framerate, awareness="high", gpu_ID=0, save_folder="", save=False
+        self, trace_directory, dataset, framerate, awareness="high", gpu_ID=0, save_folder="", save=False
     ):
         monitor_ = monitor.FullSceneMonitor(
             dataset, framerate, awareness, gpu_ID, save_folder, save
@@ -134,5 +134,5 @@ class FrustumTranslateAttacker(Attacker):
         scheduler_ = scheduler.FrustumObjectStopScheduler(
             framerate=framerate, dt_stable=dt_stable, dt_attack=dt_attack
         )
-        executor_ = executor.FrustumTranslateExecutor(*get_sensor_details(dataset))
+        executor_ = executor.FrustumTranslateExecutor(*get_sensor_details(dataset), trace_directory=trace_directory)
         super().__init__(monitor_, scheduler_, executor_)

@@ -16,7 +16,7 @@ keywords = ["security", "perception", "autonomous vehicles"]
 packages = [{include = "avsec"}]
 
 [tool.poetry.dependencies]
-python = "~3.9"
+python = "~3.10"
 numpy = "^1.19"
 lib-avstack-core = { path = "../lib-avstack-core", develop = true }
 lib-avstack-api = { path = "../lib-avstack-api", develop = true }

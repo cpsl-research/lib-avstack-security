@@ -27,7 +27,7 @@ def get_sensor_details(dataset):
 
 
 class PassthroughAttacker(Attacker):
-    def __init__(self, dataset='kitti', *args, **kwargs):
+    def __init__(self, dataset="kitti", *args, **kwargs):
         monitor_ = monitor.PassthroughMonitor()
         scheduler_ = scheduler.PassthroughScheduler()
         executor_ = executor.PassthroughExecutor(*get_sensor_details(dataset))
@@ -35,7 +35,9 @@ class PassthroughAttacker(Attacker):
 
 
 class FalsePositiveObjectAttacker(Attacker):
-    def __init__(self, trace_directory, awareness="none", framerate=10, dataset="kitti"):
+    def __init__(
+        self, trace_directory, awareness="none", framerate=10, dataset="kitti"
+    ):
         assert awareness == "none"
         monitor_ = monitor.NaiveSceneMonitor(dataset)
         if dataset == "kitti":
@@ -57,13 +59,23 @@ class FalsePositiveObjectAttacker(Attacker):
             init_range=init_range,
             final_range=final_range,
         )
-        executor_ = executor.PointsAsObjectExecutor(*get_sensor_details(dataset), trace_directory=trace_directory)
+        executor_ = executor.PointsAsObjectExecutor(
+            *get_sensor_details(dataset), trace_directory=trace_directory
+        )
         super().__init__(monitor_, scheduler_, executor_)
 
 
 class ReplayAttacker(Attacker):
-    def __init__(self, dt_stable=4, dt_attack=30, dt_repeat=0.5, 
-                 awareness="none", framerate=10, dataset="kitti", reverse=False):
+    def __init__(
+        self,
+        dt_stable=4,
+        dt_attack=30,
+        dt_repeat=0.5,
+        awareness="none",
+        framerate=10,
+        dataset="kitti",
+        reverse=False,
+    ):
         assert awareness == "none"
         # if dataset == "kitti":
         #     dt_stable = 4
@@ -74,7 +86,7 @@ class ReplayAttacker(Attacker):
         #     dt_attack = 30  # any large number
         #     dt_repeat = 1
         # else:
-            # raise NotImplementedError(dataset)
+        # raise NotImplementedError(dataset)
         monitor_ = monitor.PassthroughMonitor()
         scheduler_ = scheduler.ReplayScheduler(
             dt_burnin=0,
@@ -119,7 +131,14 @@ class RemoveObjectAttacker(Attacker):
 
 class FrustumTranslateAttacker(Attacker):
     def __init__(
-        self, trace_directory, dataset, framerate, awareness="high", gpu_ID=0, save_folder="", save=False
+        self,
+        trace_directory,
+        dataset,
+        framerate,
+        awareness="high",
+        gpu_ID=0,
+        save_folder="",
+        save=False,
     ):
         monitor_ = monitor.FullSceneMonitor(
             dataset, framerate, awareness, gpu_ID, save_folder, save
@@ -135,5 +154,7 @@ class FrustumTranslateAttacker(Attacker):
         scheduler_ = scheduler.FrustumObjectStopScheduler(
             framerate=framerate, dt_stable=dt_stable, dt_attack=dt_attack
         )
-        executor_ = executor.FrustumTranslateExecutor(*get_sensor_details(dataset), trace_directory=trace_directory)
+        executor_ = executor.FrustumTranslateExecutor(
+            *get_sensor_details(dataset), trace_directory=trace_directory
+        )
         super().__init__(monitor_, scheduler_, executor_)

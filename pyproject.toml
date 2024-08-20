@@ -18,30 +18,40 @@ packages = [{include = "avsec"}]
 [tool.poetry.dependencies]
 python = "~3.10"
 numpy = "^1.19"
-lib-avstack-core = { path = "../lib-avstack-core", develop = true }
-lib-avstack-api = { path = "../lib-avstack-api", develop = true }
+scipy = "^1.8.0"
+
+# avstack dependences
+lib-avstack-core = { path = "submodules/lib-avstack-core", develop = true, optional=true}
+lib-avstack-api = { path = "submodules/lib-avstack-api", develop = true, optional=true}
+
+[tool.poetry.extras]
+avstack = ["lib-avstack-core", "lib-avstack-api"]
 
 [tool.poetry.dev-dependencies]
 jupyter = "^1.0.0"
 seaborn = "^0.12.2"
 
 [tool.poetry.group.test.dependencies]
+snakeviz="^2.1.1"
 pytest = "^7"
 pytest-cov = "^4"
 bandit = "^1.7"
-black = "~22.12.0"
+black = {extras = ["jupyter"], version = "~22.12.0"}
 mypy = "^0"
 isort = "^5.11"
 flake8 = "^5.0"
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"
+autoflake = "^1"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
-addopts = "-ra -q -s -l"
+addopts = "-ra -q -s"
 testpaths = [
     "tests",
     "integration",
 ]
+
+[build-system]
+requires = [
+    "poetry-core",
+]
+build-backend = "poetry.core.masonry.api"

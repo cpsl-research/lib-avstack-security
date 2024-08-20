@@ -16,8 +16,8 @@ __pycache__/
 
 tmp/
 *.p
-!tests/data/*
-!data/test_data/*
+!tests/data/**
+!data/test_data/**
 
 
 # Byte-compiled / optimized / DLL files

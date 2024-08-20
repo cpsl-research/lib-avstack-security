@@ -9,8 +9,6 @@ import os
 import pickle
 import random
 import shutil
-import sys
-import time
 from copy import copy, deepcopy
 from functools import partial
 from multiprocessing import Pool, cpu_count
@@ -18,7 +16,7 @@ from multiprocessing import Pool, cpu_count
 import numpy as np
 import percep_attacks
 from avutils import algorithms
-from avutils.perception import bbox, maskfilters, types
+from avutils.perception import bbox, maskfilters
 from percep_attacks import analysis
 from percep_attacks.lidar import defend
 from tqdm import tqdm

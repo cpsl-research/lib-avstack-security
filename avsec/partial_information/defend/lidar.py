@@ -178,7 +178,6 @@ class GbscDefense(PerceptionDefense):
         """
         Gets an adaptive threshold from the batch of data
         """
-        pass
 
     def evaluate(self, lidar, label, calib):
         passed, score = GBSC(
@@ -263,16 +262,16 @@ def GBSC(lidar, object, calib, alpha=0.4, threshold=0.2):
     )
 
     # Run anomaly score
-    score = get_shadow_anomaly_score(lidar[shadow_filter, :], object, calib, alpha=alpha)
+    score = get_shadow_anomaly_score(
+        lidar[shadow_filter, :], object, calib, alpha=alpha
+    )
     return score <= threshold, score
 
 
 def LPD(lidar, object, calib, threshold=0.8):
     # Get number of points in frustum (denom)
     box2d = object.box3d.project_to_2d_bbox(calib)
-    frustum_filter = maskfilters.filter_points_in_image_frustum(
-        lidar, box2d, calib
-    )
+    frustum_filter = maskfilters.filter_points_in_image_frustum(lidar, box2d, calib)
     npts_frustum = sum(frustum_filter)
 
     # Get number of points behind
@@ -344,10 +343,14 @@ def compare_3d_detections_image_lidar(
     if metric.lower() == "iou":
         A = avstack.modules.assignment.build_A_from_iou(detections_A, detections_B)
     elif metric.lower() == "distance":
-        A = avstack.modules.assignment.build_A_from_dist(detections_A, detections_B, radius=radius)
+        A = avstack.modules.assignment.build_A_from_dist(
+            detections_A, detections_B, radius=radius
+        )
     else:
         raise NotImplementedError(metric)
-    assignments = avstack.modules.assignment.gnn_single_frame_assign(A, cost_threshold=0)
+    assignments = avstack.modules.assignment.gnn_single_frame_assign(
+        A, cost_threshold=0
+    )
 
     # Return which are consistent and which are inconsistent
     consistent = assignments

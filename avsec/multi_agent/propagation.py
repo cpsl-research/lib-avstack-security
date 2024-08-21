@@ -9,15 +9,23 @@ import numpy as np
 from avstack.geometry import Attitude, Velocity, transform_orientation
 
 
-def initialize_velocity_attitude(v_sigma: float, reference_agent: "ReferenceFrame"):
+def initialize_velocity_attitude(
+    reference_agent: "ReferenceFrame",
+    v_sigma: float = 10,
+    dx_total: np.ndarray = None,
+    dt_total: np.ndarray = None,
+):
     """Initialize a random velocity/attitude in ground projected frame"""
 
     # velocity is random in x-y
-    v_vec = v_sigma * np.array([np.random.randn(), np.random.randn(), 0])
+    if dx_total is None:
+        v_vec = v_sigma * np.array([np.random.randn(), np.random.randn(), 0])
+    else:
+        v_vec = dx_total / dt_total
 
     # attitude is in direction of velocity
-    yaw = np.arctan2(v_vec[2], v_vec[1])
-    euler = [yaw, 0, 0]
+    yaw = np.arctan2(v_vec[1], v_vec[0])
+    euler = [0, 0, yaw]
     q_obj = transform_orientation(euler, "euler", "quat")
 
     # return to original reference frame
@@ -43,7 +51,7 @@ class AdvPropagator:
 class StaticPropagator(AdvPropagator):
     def _propagate(self, dt: float, obj: "ObjectState"):
         """Static propagation is nothing"""
-        return obj
+        pass
 
 
 class MarkovPropagator(AdvPropagator):
@@ -63,6 +71,7 @@ class MarkovPropagator(AdvPropagator):
         obj.position = obj.position + obj.velocity.x * dt
         if obj.box is not None:
             obj.box.position = obj.position
+            obj.box.attitude = obj.attitude
 
 
 class TrajectoryPropagator(AdvPropagator):
@@ -81,12 +90,14 @@ class TrajectoryPropagator(AdvPropagator):
     def _propagate(self, dt: float, obj: "ObjectState"):
         # initialize velocity and attitude, if needed
         if obj.velocity is None:
-            obj.velocity = Velocity(self._v, obj.reference)
-        else:
-            obj.velocity.x = self._v
+            obj.velocity, obj.attitude = initialize_velocity_attitude(
+                dx_total=self.dx_total,
+                dt_total=self.dt_total,
+                reference_agent=obj.reference
+            )
 
         # propagate along trajectory
         obj.position = obj.position + obj.velocity.x * dt
         if obj.box is not None:
             obj.box.position = obj.position
-        return obj
+            obj.box.attitude = obj.attitude

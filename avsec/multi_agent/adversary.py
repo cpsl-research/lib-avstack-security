@@ -8,8 +8,6 @@ if TYPE_CHECKING:
 import numpy as np
 from avstack.datastructs import PriorityQueue
 
-from avsec.multi_agent.selection import select_false_negatives, select_false_positives
-
 
 class AdversaryModel:
     def __init__(self, coordinated: bool, dt_init: float = 2.0):
@@ -96,30 +94,6 @@ class AdversaryModel:
         self.reset_targets()
         self.ready = True
         self.init_targets = True
-
-        # if not len(msg.track_arrays) == 2:
-        #     raise ValueError("Input must be of length 2 -- FP and FN")
-        # else:
-        #     to_frame = self.get_parameter("attack_agent_name").value
-        #     for obj_fp in msg.track_arrays[0].tracks:
-        #         obj_fp_stamped = BoxTrack(header=msg.header, track=obj_fp)
-        #         obj_fp_in_agent_frame = self._tf_buffer.transform(
-        #             object_stamped=obj_fp_stamped,
-        #             target_frame=to_frame,
-        #         )
-        #         obj_fp_avstack = TrackBridge.boxtrack_to_avstack(obj_fp_in_agent_frame)
-        #         self.targets["false_positive"].append(
-        #             TargetObject(obj_state=obj_fp_avstack)
-        #         )
-
-        # fn targets are in the world coordinate frame -- convert to agent
-        # for obj_fn in msg.track_arrays[1].tracks:
-        #     obj_fn_in_agent_frame = do_transform_boxtrack(obj_fn, tf_to_agent)
-        #     obj_fn_avstack = TrackBridge.boxtrack_to_avstack(
-        #         obj_fn_in_agent_frame, header=tf_to_agent.header
-        #     )
-        #     self.targets["false_negative"].append(TargetObject(obj_state=obj_fn_avstack))
-
         raise NotImplementedError()
 
     def initialize_uncoordinated(self, objects: "DataContainer"):

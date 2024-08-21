@@ -12,7 +12,7 @@ from avstack.modules.tracking import BasicBoxTrack3D
 
 
 class TargetObject:
-    def __init__(self, obj_state: "ObjectState", ID: int = None):
+    def __init__(self, obj_state: "ObjectState"):
         self.obj_state = obj_state
         self.target_state = deepcopy(obj_state)
         self.last_position = obj_state.position
@@ -46,5 +46,5 @@ class TargetObject:
         """Updates target state with kinematics"""
         if self.propagation_model is None:
             raise RuntimeError("Need to initialize propagation model")
-        self.target_state = self.propagation_model.propagate(dt, self.target_state)
+        self.propagation_model.propagate(dt, self.target_state)
         self._timestamp += dt

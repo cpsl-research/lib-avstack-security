@@ -33,11 +33,15 @@ def initialize_velocity_attitude(v_sigma: float, reference_agent: "ReferenceFram
 
 class AdvPropagator:
     def propagate(self, dt: float, obj: "ObjectState"):
+        self._propagate(dt, obj)
+        obj.t += dt
+
+    def _propagate(self, dt: float, obj: "ObjectState"):
         raise NotImplementedError
 
 
 class StaticPropagator(AdvPropagator):
-    def propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState"):
         """Static propagation is nothing"""
         return obj
 
@@ -47,7 +51,7 @@ class MarkovPropagator(AdvPropagator):
         self.v_sigma = v_sigma
         self.dv_sigma = dv_sigma
 
-    def propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState"):
         """Apply a markov model to velocity and pass to position"""
         # initialize velocity and attitude, if needed
         if obj.velocity is None:
@@ -74,7 +78,7 @@ class TrajectoryPropagator(AdvPropagator):
         self.dt_elapsed = 0
         self._v = dx_total / dt_total
 
-    def propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState"):
         # initialize velocity and attitude, if needed
         if obj.velocity is None:
             obj.velocity = Velocity(self._v, obj.reference)

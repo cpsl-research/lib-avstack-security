@@ -29,20 +29,20 @@ class TargetObject:
     def as_track(self):
         """Format the target state as a track state"""
         return BasicBoxTrack3D(
-            t0=self.obj_state.t,
-            box3d=self.obj_state.box,
-            reference=self.obj_state.reference,
-            obj_type=self.obj_state.obj_type,
-            v=self.obj_state.velocity.x,
+            t0=self.target_state.t,
+            box3d=self.target_state.box,
+            reference=self.target_state.reference,
+            obj_type=self.target_state.obj_type,
+            v=self.target_state.velocity.x,
         )
 
     def as_detection(self):
         """Format the target state as a detection"""
         return BoxDetection(
             source_identifier=0,
-            box=self.obj_state.box,
-            reference=self.obj_state.reference,
-            obj_type=self.obj_state.obj_type,
+            box=self.target_state.box,
+            reference=self.target_state.reference,
+            obj_type=self.target_state.obj_type,
             score=1.0,
         )
 

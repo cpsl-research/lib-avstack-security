@@ -2,7 +2,6 @@ from typing import TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
-    from avstack.datastructs import DataContainer
     from avstack.geometry import ReferenceFrame
     from .manifest import (
         FalseNegativeManifest,
@@ -12,7 +11,9 @@ if TYPE_CHECKING:
     from .propagation import AdvPropagator
 
 import numpy as np
-from avstack.datastructs import PriorityQueue
+from avstack.datastructs import DataContainer
+from avstack.environment.objects import ObjectState
+from avstack.modules.perception.detections import BoxDetection
 
 
 class AdversaryModel:
@@ -23,17 +24,18 @@ class AdversaryModel:
         manifest_fn: Union["FalseNegativeManifest", None] = None,
         manifest_tr: Union["TranslationManifest", None] = None,
         dt_init: float = 2.0,
+        dt_reset: float = 10.0,
     ):
         self.manifest_fp = manifest_fp
         self.manifest_fn = manifest_fn
         self.manifest_tr = manifest_tr
         self.propagator = propagator
         self.dt_init = dt_init
+        self.dt_reset = dt_reset
         self.reset()
 
     def reset(self):
         self._t_start = None
-        self.data_buffer = PriorityQueue(max_size=5, max_heap=True)
         self.targets_initialized = False
         self.targets = {"false_positive": [], "false_negative": [], "translations": []}
 
@@ -55,63 +57,85 @@ class AdversaryModel:
         that is sufficiently close in space to the target and eliminate
         it from the outgoing message.
         """
-        # add to the data buffer
+        # handle timing
         timestamp = objects.timestamp
         if self._t_start is None:
             self._t_start = timestamp
-        self.data_buffer.push(
-            priority=timestamp,
-            item=objects,
+        elif (timestamp - self._t_start) > self.dt_reset:
+            self.reset()
+            return objects
+
+        # convert to objects
+        obj_convert = DataContainer(
+            frame=objects.frame,
+            timestamp=objects.timestamp,
+            source_identifier=objects.source_identifier,
+            data=[],
         )
+        for obj in objects:
+            if isinstance(obj, ObjectState):
+                obj_convert.append(obj)
+            elif isinstance(obj, BoxDetection):
+                new_obj = ObjectState(obj.obj_type)
+                new_obj.set(
+                    t=timestamp,
+                    position=obj.box.position,
+                    attitude=obj.box.attitude,
+                    box=obj.box,
+                )
+                obj_convert.append(new_obj)
+            else:
+                raise NotImplementedError(type(obj))
 
         # run initialization logic
         if not self.targets_initialized:
             if (timestamp - self._t_start) >= self.dt_init:
                 self.initialize_uncoordinated(
-                    objects=objects, reference_agent=reference_agent
+                    objects=obj_convert, reference_agent=reference_agent
                 )
 
         if self.targets_initialized:
             # process false positives
             for obj_fp in self.targets["false_positive"]:
-                obj_fp.propagate(dt=(timestamp - obj_fp.t))
+                dt = timestamp - obj_fp.t
+                obj_fp.propagate(dt=dt)
                 obj_fp_convert = obj_fp.as_detection()
-                objects.append(obj_fp_convert)
+                obj_convert.append(obj_fp_convert)
 
             # process false negatives
             for obj_fn in self.targets["false_negative"]:
                 # perform assignment of existing detections/tracks to targets
                 dists = [
                     obj.position.distance(obj_fn.last_position, check_reference=False)
-                    for obj in objects
+                    for obj in obj_convert
                 ]
                 idx_select = np.argmin(dists)
                 if dists[idx_select] <= fn_dist_threshold:
-                    obj_fn.last_position = objects[idx_select].position
+                    obj_fn.last_position = obj_convert[idx_select].position
                     # remove the ones that were assigned
-                    del objects[idx_select]
+                    del obj_convert[idx_select]
 
             # process translations
             for obj_tr in self.targets["translations"]:
                 # perform assignment of existing detections/tracks to obj states
                 dists = [
                     obj.position.distance(obj_tr.last_position, check_reference=False)
-                    for obj in objects
+                    for obj in obj_convert
                 ]
                 idx_select = np.argmin(dists)
                 if dists[idx_select] <= fn_dist_threshold:
-                    obj_tr.last_position = objects[idx_select].position
+                    obj_tr.last_position = obj_convert[idx_select].position
                     # translate the ones that were assigned
                     obj_tr.propagate(dt=(timestamp - obj_fn.t))
                     obj_tr_convert = obj_tr.as_detection()
-                    objects.append(obj_tr_convert)
+                    obj_convert.append(obj_tr_convert)
 
             # filter objects outside a distance
-            objects = objects.filter(
+            obj_convert = obj_convert.filter(
                 lambda obj: obj.position.norm() < threshold_obj_dist
             )
 
-        return objects
+        return obj_convert
 
     def initialize_uncoordinated(
         self, objects: "DataContainer", reference_agent: "ReferenceFrame"

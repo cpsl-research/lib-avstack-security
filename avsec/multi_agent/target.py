@@ -18,15 +18,16 @@ class TargetObject:
         self.last_position = obj_state.position
         self.timestamp = obj_state.timestamp
         self.propagation_model = None
+        self.states_initialized = False
 
     @property
-    def t(self):
+    def t(self) -> float:
         return self.timestamp
 
     def set_propagation_model(self, model: "AdvPropagator"):
         self.propagation_model = model
 
-    def as_track(self):
+    def as_track(self) -> BasicBoxTrack3D:
         """Format the target state as a track state"""
         return BasicBoxTrack3D(
             t0=self.target_state.t,
@@ -36,7 +37,7 @@ class TargetObject:
             v=self.target_state.velocity.x,
         )
 
-    def as_detection(self):
+    def as_detection(self) -> BoxDetection:
         """Format the target state as a detection"""
         return BoxDetection(
             source_identifier=0,
@@ -50,5 +51,7 @@ class TargetObject:
         """Updates target state with kinematics"""
         if self.propagation_model is None:
             raise RuntimeError("Need to initialize propagation model")
-        self.propagation_model.propagate(dt, self.target_state)
+        initialize = not self.states_initialized
+        self.propagation_model.propagate(dt, self.target_state, initialize=initialize)
         self.timestamp += dt
+        self.states_initialized = True

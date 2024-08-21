@@ -29,6 +29,7 @@ class FalsePositiveManifest(AdvManifest):
         self,
         timestamp: float,
         reference_agent: "ReferenceFrame",
+        min_select: int = 1,
         *args,
         **kwargs,
     ) -> List[TargetObject]:
@@ -41,7 +42,7 @@ class FalsePositiveManifest(AdvManifest):
         reference_agent_gp = reference_agent.get_ground_projected_reference()
 
         # sample the number of false positives
-        n_fp = int(np.random.poisson(self.fp_poisson))
+        n_fp = max(min_select, int(np.random.poisson(self.fp_poisson)))
 
         # construct target positions
         targets = []

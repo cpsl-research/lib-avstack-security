@@ -40,18 +40,17 @@ def initialize_velocity_attitude(
 
 
 class AdvPropagator:
-    def propagate(self, dt: float, obj: "ObjectState"):
-        self._propagate(dt, obj)
+    def propagate(self, dt: float, obj: "ObjectState", initialize: bool = False):
+        self._propagate(dt, obj, initialize)
         obj.t += dt
 
-    def _propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         raise NotImplementedError
 
 
 class StaticPropagator(AdvPropagator):
-    def _propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         """Static propagation is nothing"""
-        pass
 
 
 class MarkovPropagator(AdvPropagator):
@@ -59,13 +58,15 @@ class MarkovPropagator(AdvPropagator):
         self.v_sigma = v_sigma
         self.dv_sigma = dv_sigma
 
-    def _propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         """Apply a markov model to velocity and pass to position"""
         # initialize velocity and attitude, if needed
-        if obj.velocity is None:
+        if (obj.velocity is None) or (initialize):
             obj.velocity, obj.attitude = initialize_velocity_attitude(
                 v_sigma=self.v_sigma, reference_agent=obj.reference
             )
+
+        # add some noise to velocity
 
         # propagate with kinematics
         obj.position = obj.position + obj.velocity.x * dt
@@ -85,15 +86,14 @@ class TrajectoryPropagator(AdvPropagator):
         self.dx_total = dx_total
         self.dt_total = dt_total
         self.dt_elapsed = 0
-        self._v = dx_total / dt_total
 
-    def _propagate(self, dt: float, obj: "ObjectState"):
+    def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         # initialize velocity and attitude, if needed
-        if obj.velocity is None:
+        if (obj.velocity is None) or (initialize):
             obj.velocity, obj.attitude = initialize_velocity_attitude(
                 dx_total=self.dx_total,
                 dt_total=self.dt_total,
-                reference_agent=obj.reference
+                reference_agent=obj.reference,
             )
 
         # propagate along trajectory

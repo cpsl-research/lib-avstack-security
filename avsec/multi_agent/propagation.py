@@ -36,7 +36,11 @@ def initialize_velocity_attitude(
     attitude = Attitude(q_obj, reference=reference_agent_gp).change_reference(
         reference_agent, inplace=False
     )
-    return velocity, attitude
+
+    # define the ground projected plane in two vectors
+    plane = reference_agent.get_ground_projected_plane()
+
+    return velocity, attitude, plane
 
 
 class AdvPropagator:
@@ -54,19 +58,25 @@ class StaticPropagator(AdvPropagator):
 
 
 class MarkovPropagator(AdvPropagator):
-    def __init__(self, v_sigma: float = 10, dv_sigma: float = 1):
+    def __init__(self, v_sigma: float = 10, dv_sigma: float = 0.10):
         self.v_sigma = v_sigma
         self.dv_sigma = dv_sigma
+        self.plane = []
 
     def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         """Apply a markov model to velocity and pass to position"""
         # initialize velocity and attitude, if needed
         if (obj.velocity is None) or (initialize):
-            obj.velocity, obj.attitude = initialize_velocity_attitude(
+            obj.velocity, obj.attitude, self.plane = initialize_velocity_attitude(
                 v_sigma=self.v_sigma, reference_agent=obj.reference
             )
 
-        # add some noise to velocity
+        # add some noise to velocity in the plane
+        dv_vec = (
+            self.dv_sigma * np.random.randn() * self.plane[0]
+            + self.dv_sigma * np.random.randn() * self.plane[1]
+        )
+        obj.velocity.x += dv_vec * dt
 
         # propagate with kinematics
         obj.position = obj.position + obj.velocity.x * dt
@@ -86,11 +96,12 @@ class TrajectoryPropagator(AdvPropagator):
         self.dx_total = dx_total
         self.dt_total = dt_total
         self.dt_elapsed = 0
+        self.plane = []
 
     def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         # initialize velocity and attitude, if needed
         if (obj.velocity is None) or (initialize):
-            obj.velocity, obj.attitude = initialize_velocity_attitude(
+            obj.velocity, obj.attitude, self.plane = initialize_velocity_attitude(
                 dx_total=self.dx_total,
                 dt_total=self.dt_total,
                 reference_agent=obj.reference,

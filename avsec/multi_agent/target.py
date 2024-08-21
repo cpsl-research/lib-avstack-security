@@ -16,8 +16,12 @@ class TargetObject:
         self.obj_state = obj_state
         self.target_state = deepcopy(obj_state)
         self.last_position = obj_state.position
-        self._timestamp = obj_state.timestamp
+        self.timestamp = obj_state.timestamp
         self.propagation_model = None
+
+    @property
+    def t(self):
+        return self.timestamp
 
     def set_propagation_model(self, model: "AdvPropagator"):
         self.propagation_model = model
@@ -47,4 +51,4 @@ class TargetObject:
         if self.propagation_model is None:
             raise RuntimeError("Need to initialize propagation model")
         self.propagation_model.propagate(dt, self.target_state)
-        self._timestamp += dt
+        self.timestamp += dt

@@ -82,4 +82,5 @@ class FalseNegativeManifest(AdvManifest):
 
 
 class TranslationManifest(FalseNegativeManifest):
-    pass
+    def __init__(self, tr_fraction: float):
+        super().__init__(fn_fraction=tr_fraction)

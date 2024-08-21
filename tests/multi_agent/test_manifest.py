@@ -26,7 +26,7 @@ def test_false_negative_manifest():
 
 def test_translation_manifest():
     np.random.seed(1)
-    manifest = TranslationManifest(fn_fraction=0.5)
+    manifest = TranslationManifest(tr_fraction=0.5)
     objs = [ObjectState("car") for _ in range(10)]
     targets = manifest.select(objs)
     assert len(targets) > 0

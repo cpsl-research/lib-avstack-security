@@ -29,7 +29,7 @@ class FalsePositiveManifest(AdvManifest):
         self,
         timestamp: float,
         reference_agent: "ReferenceFrame",
-        min_select: int = 1,
+        min_select: int = 0,
         *args,
         **kwargs,
     ) -> List[TargetObject]:
@@ -72,9 +72,11 @@ class FalseNegativeManifest(AdvManifest):
     def __init__(self, fn_fraction: float):
         self.fn_fraction = fn_fraction
 
-    def select(self, objects: "DataContainer", *args, **kwargs) -> List[TargetObject]:
+    def select(
+        self, objects: "DataContainer", min_select: int = 0, *args, **kwargs
+    ) -> List[TargetObject]:
         n_objects = len(objects)
-        n_fn = max(min(1, n_objects), int(self.fn_fraction * n_objects))
+        n_fn = max(min_select, int(self.fn_fraction * n_objects))
         idx_targets = np.random.choice(
             list(range(len(objects))), size=n_fn, replace=False
         )

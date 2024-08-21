@@ -97,8 +97,7 @@ class AdversaryModel:
         if self.targets_initialized:
             # process false positives
             for obj_fp in self.targets["false_positive"]:
-                dt = timestamp - obj_fp.t
-                obj_fp.propagate(dt=dt)
+                obj_fp.propagate(dt=(timestamp - obj_fp.t))
                 obj_fp_convert = obj_fp.as_detection()
                 obj_convert.append(obj_fp_convert)
 
@@ -126,9 +125,9 @@ class AdversaryModel:
                 if dists[idx_select] <= fn_dist_threshold:
                     obj_tr.last_position = obj_convert[idx_select].position
                     # translate the ones that were assigned
-                    obj_tr.propagate(dt=(timestamp - obj_fn.t))
+                    obj_tr.propagate(dt=(timestamp - obj_tr.t))
                     obj_tr_convert = obj_tr.as_detection()
-                    obj_convert.append(obj_tr_convert)
+                    obj_convert[idx_select] = obj_tr_convert
 
             # filter objects outside a distance
             obj_convert = obj_convert.filter(
@@ -161,7 +160,7 @@ class AdversaryModel:
 
         # select translation targets from existing objects
         if self.manifest_tr is not None:
-            self.targets["translation"] = self.manifest_tr.select(objects=objects)
+            self.targets["translations"] = self.manifest_tr.select(objects=objects)
 
         # set the propagation model
         for vs in self.targets.values():

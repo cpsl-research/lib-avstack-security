@@ -1,6 +1,6 @@
 import numpy as np
 from avstack.environment.objects import ObjectState
-from avstack.geometry import GlobalOrigin3D, Position
+from avstack.geometry import Attitude, Box3D, GlobalOrigin3D, Position
 
 from avsec.multi_agent.propagation import (
     MarkovPropagator,
@@ -9,12 +9,16 @@ from avsec.multi_agent.propagation import (
 )
 
 
-def random_objects(n_objects: int = 10):
+def random_objects(n_objects: int = 10, seed: int = None):
+    np.random.seed(seed)
     objs = []
     for i in range(n_objects):
         obj = ObjectState("car", ID=i)
         obj.t = 0.0
         obj.position = Position(np.random.randn(3), GlobalOrigin3D)
+        obj.attitude = Attitude(np.quaternion(1), GlobalOrigin3D)
+        # obj.velocity = Velocity(np.random.randn(3), GlobalOrigin3D)
+        obj.box = Box3D(position=obj.position, attitude=obj.attitude, hwl=[2, 2, 4])
         objs.append(obj)
     return objs
 

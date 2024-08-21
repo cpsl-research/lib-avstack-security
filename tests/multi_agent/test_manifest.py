@@ -11,7 +11,7 @@ from avsec.multi_agent.manifest import (
 
 def test_false_positive_manifest():
     np.random.seed(1)
-    manifest = FalsePositiveManifest(fp_poisson=2.0)
+    manifest = FalsePositiveManifest(fp_poisson=20.0)
     targets = manifest.select(timestamp=1.0, reference_agent=GlobalOrigin3D)
     assert len(targets) > 0
 

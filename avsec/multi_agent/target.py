@@ -13,7 +13,7 @@ from avstack.modules.tracking import BasicBoxTrack3D
 
 class TargetObject:
     def __init__(self, obj_state: "ObjectState"):
-        self.obj_state = obj_state
+        self._obj_state = obj_state
         self.target_state = deepcopy(obj_state)
         self.last_position = obj_state.position
         self.timestamp = obj_state.timestamp

@@ -28,6 +28,7 @@ class AdversaryModel:
         manifest: Union[ConfigDict, "AdvManifest", None] = None,
         dt_init: float = 2.0,
         dt_reset: float = 10.0,
+        seed: Union[int, None] = None,
     ):
         # parse the manifest
         if manifest is not None:
@@ -37,7 +38,11 @@ class AdversaryModel:
                 raise ValueError(
                     "If manifest is passed, do not pass other manifest_TYPE"
                 )
-            manifest = AVSEC.build(manifest) if isinstance(manifest, dict) else manifest
+            manifest = (
+                AVSEC.build(manifest, default_args={"seed": seed})
+                if isinstance(manifest, dict)
+                else manifest
+            )
             self.manifest_fp = None
             self.manifest_fn = None
             self.manifest_tr = None
@@ -53,24 +58,26 @@ class AdversaryModel:
                 raise NotImplementedError(type(manifest))
         else:
             self.manifest_fp = (
-                AVSEC.build(manifest_fp)
+                AVSEC.build(manifest_fp, default_args={"seed": seed})
                 if isinstance(manifest_fp, dict)
                 else manifest_fp
             )
             self.manifest_fn = (
-                AVSEC.build(manifest_fn)
+                AVSEC.build(manifest_fn, default_args={"seed": seed})
                 if isinstance(manifest_fn, dict)
                 else manifest_fn
             )
             self.manifest_tr = (
-                AVSEC.build(manifest_tr)
+                AVSEC.build(manifest_tr, default_args={"seed": seed})
                 if isinstance(manifest_tr, dict)
                 else manifest_tr
             )
 
         # parse the propagator
         self.propagator = (
-            AVSEC.build(propagator) if isinstance(propagator, dict) else propagator
+            AVSEC.build(propagator, default_args={"seed": seed})
+            if isinstance(propagator, dict)
+            else propagator
         )
 
         # set other inputs
@@ -86,7 +93,7 @@ class AdversaryModel:
     def __call__(
         self,
         objects: "DataContainer",
-        reference_agent: "ReferenceFrame",
+        reference: "ReferenceFrame",
         fn_dist_threshold: int = 6,
         threshold_obj_dist: float = 70.0,
     ) -> "DataContainer":
@@ -94,7 +101,7 @@ class AdversaryModel:
 
         Args:
             objects: a datacontainer of objects or detections
-            reference_agent: the reference frame of the agent
+            reference: the reference frame of the agent
 
         Returns:
             obj_convert: a datacontainer of detections
@@ -152,7 +159,7 @@ class AdversaryModel:
         if not self.targets_initialized:
             if (timestamp - self._t_start) >= self.dt_init:
                 self.initialize_uncoordinated(
-                    objects=input_as_objects, reference_agent=reference_agent
+                    objects=input_as_objects, reference=reference
                 )
 
         # ===========================================
@@ -162,11 +169,13 @@ class AdversaryModel:
         if self.targets_initialized:
             # process false positives
             for obj_fp in self.targets["false_positive"]:
+                obj_fp.change_reference(reference, inplace=True)
                 obj_fp.propagate(dt=(timestamp - obj_fp.t))
                 input_as_objects.append(obj_fp.as_object_state())
 
             # process false negatives
             for obj_fn in self.targets["false_negative"]:
+                obj_fn.change_reference(reference, inplace=True)
                 # perform assignment of existing detections/tracks to targets
                 dists = [
                     obj.position.distance(obj_fn.last_position, check_reference=False)
@@ -180,6 +189,7 @@ class AdversaryModel:
 
             # process translations
             for obj_tr in self.targets["translations"]:
+                obj_tr.change_reference(reference, inplace=True)
                 # perform assignment of existing detections/tracks to obj states
                 dists = [
                     obj.position.distance(obj_tr.last_position, check_reference=False)
@@ -222,19 +232,19 @@ class AdversaryModel:
         return outputs
 
     def initialize_uncoordinated(
-        self, objects: "DataContainer", reference_agent: "ReferenceFrame"
+        self, objects: "DataContainer", reference: "ReferenceFrame"
     ):
         """Initialize uncoordinated attack by selecting attack targets
 
         Args:
             objects: existing objects
-            reference_agent: reference frame for agent
+            reference: reference frame for agent
         """
         # select false positive objects randomly in space
         if self.manifest_fp is not None:
             self.targets["false_positive"] = self.manifest_fp.select(
                 timestamp=objects.timestamp,
-                reference_agent=reference_agent,
+                reference=reference,
             )
 
         # select false negative targets from existing objects

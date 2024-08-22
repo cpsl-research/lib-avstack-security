@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from avstack.environment.objects import ObjectState
+    from avstack.geometry import ReferenceFrame
     from .propagation import AdvPropagator
 
 from copy import deepcopy
@@ -23,6 +24,19 @@ class TargetObject:
     @property
     def t(self) -> float:
         return self.timestamp
+
+    @property
+    def reference(self):
+        return self._obj_state.reference
+
+    def change_reference(self, reference: "ReferenceFrame", inplace: bool):
+        if reference != self.reference:
+            if inplace:
+                self._obj_state.change_reference(reference=reference, inplace=True)
+                self._target_state.change_reference(reference=reference, inplace=True)
+                self.last_position.change_reference(reference=reference, inplace=True)
+            else:
+                raise NotImplementedError()
 
     def set_propagation_model(self, model: "AdvPropagator"):
         self._propagation_model = model

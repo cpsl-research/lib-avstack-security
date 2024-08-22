@@ -8,6 +8,8 @@ if TYPE_CHECKING:
 import numpy as np
 from avstack.geometry import Attitude, Velocity, transform_orientation
 
+from avsec.config import AVSEC
+
 
 def initialize_velocity_attitude(
     reference_agent: "ReferenceFrame",
@@ -52,13 +54,15 @@ class AdvPropagator:
         raise NotImplementedError
 
 
+@AVSEC.register_module()
 class StaticPropagator(AdvPropagator):
     def _propagate(self, dt: float, obj: "ObjectState", initialize: bool):
         """Static propagation is nothing"""
 
 
+@AVSEC.register_module()
 class MarkovPropagator(AdvPropagator):
-    def __init__(self, v_sigma: float = 10, dv_sigma: float = 0.10):
+    def __init__(self, v_sigma: float = 10, dv_sigma: float = 0.50):
         self.v_sigma = v_sigma
         self.dv_sigma = dv_sigma
         self.plane = []
@@ -85,6 +89,7 @@ class MarkovPropagator(AdvPropagator):
             obj.box.attitude = obj.attitude
 
 
+@AVSEC.register_module()
 class TrajectoryPropagator(AdvPropagator):
     def __init__(self, dx_total: np.ndarray, dt_total: float = 10):
         """Propagate an object to a point in spaces

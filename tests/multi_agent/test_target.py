@@ -31,4 +31,4 @@ def test_target_propagation():
     # with prop set
     target.set_propagation_model(MarkovPropagator())
     target.propagate(dt=1.0)
-    assert target.target_state.timestamp == 1.0
+    assert target._target_state.timestamp == 1.0

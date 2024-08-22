@@ -9,6 +9,8 @@ import numpy as np
 from avstack.environment.objects import ObjectState
 from avstack.geometry import Attitude, Box3D, Position
 
+from avsec.config import AVSEC
+
 from .target import TargetObject
 
 
@@ -17,6 +19,7 @@ class AdvManifest:
         raise NotImplementedError
 
 
+@AVSEC.register_module()
 class FalsePositiveManifest(AdvManifest):
     def __init__(
         self, fp_poisson: float, x_sigma: float = 30, hwl: List[float] = [2, 2, 4]
@@ -68,6 +71,7 @@ class FalsePositiveManifest(AdvManifest):
         return targets
 
 
+@AVSEC.register_module()
 class FalseNegativeManifest(AdvManifest):
     def __init__(self, fn_fraction: float):
         self.fn_fraction = fn_fraction
@@ -84,6 +88,7 @@ class FalseNegativeManifest(AdvManifest):
         return targets
 
 
+@AVSEC.register_module()
 class TranslationManifest(FalseNegativeManifest):
     def __init__(self, tr_fraction: float):
         super().__init__(fn_fraction=tr_fraction)

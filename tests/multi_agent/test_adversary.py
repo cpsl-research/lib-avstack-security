@@ -2,6 +2,7 @@ import numpy as np
 from avstack.datastructs import DataContainer
 from avstack.environment.objects import ObjectState
 from avstack.geometry import Attitude, Box3D, GlobalOrigin3D, Position, Velocity
+from avstack.modules.perception.detections import BoxDetection
 
 from avsec.multi_agent.adversary import AdversaryModel
 from avsec.multi_agent.manifest import (
@@ -28,6 +29,22 @@ def random_objects(n_objects: int = 10, seed: int = None):
         obj.box = Box3D(position=obj.position, attitude=obj.attitude, hwl=[2, 2, 4])
         objs.append(obj)
     return objs
+
+
+def random_detections(n_dets: int = 10, seed: int = None):
+    objs = random_objects(n_dets, seed=seed)
+    dets = []
+    for obj in objs:
+        dets.append(
+            BoxDetection(
+                source_identifier="",
+                box=obj.box,
+                reference=obj.reference,
+                obj_type=obj.obj_type,
+                score=obj.score,
+            )
+        )
+    return dets
 
 
 def test_adversary_with_manifests_and_props():
@@ -73,7 +90,7 @@ def test_adversary_with_manifests_and_props():
                     frame=i_frame,
                     timestamp=timestamp,
                     source_identifier="",
-                    data=random_objects(n_objects=n_objs_fixed),
+                    data=random_detections(n_dets=n_objs_fixed),
                 )
 
                 # run the adversary model
@@ -94,11 +111,11 @@ def test_adversary_with_manifests_and_props():
             for target in adversary.targets["false_positive"]:
                 if "static" in str(propagator.__class__).lower():
                     assert np.allclose(
-                        target.last_position.x, target.target_state.position.x
+                        target.last_position.x, target._target_state.position.x
                     )
                 else:
                     assert not np.allclose(
-                        target.last_position.x, target.target_state.position.x
+                        target.last_position.x, target._target_state.position.x
                     )
 
 
@@ -127,3 +144,13 @@ def test_adv_translation():
 
         # run the adversary model
         objects = adversary(objects, ref_agent)
+
+
+def test_parse_manifest():
+    adversary = AdversaryModel(
+        propagator=StaticPropagator(),
+        manifest=TranslationManifest(tr_fraction=0.5),
+    )
+    assert adversary.manifest_tr is not None
+    assert adversary.manifest_fn is None
+    assert adversary.manifest_fp is None

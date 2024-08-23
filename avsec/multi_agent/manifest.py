@@ -15,8 +15,15 @@ from .target import TargetObject
 
 
 class AdvManifest:
-    def __init__(self, seed: Union[int, None] = None):
+    def __init__(
+        self,
+        seed: Union[int, None] = None,
+        min_select: int = 0,
+        max_select: int = np.inf,
+    ):
         self.rng = np.random.RandomState(seed)
+        self.min_select = min_select
+        self.max_select = max_select
 
     @property
     def rng(self) -> np.random.RandomState:
@@ -49,7 +56,6 @@ class FalsePositiveManifest(AdvManifest):
         self,
         timestamp: float,
         reference: "ReferenceFrame",
-        min_select: int = 0,
         *args,
         **kwargs,
     ) -> List[TargetObject]:
@@ -62,7 +68,7 @@ class FalsePositiveManifest(AdvManifest):
         reference_gp = reference.get_ground_projected_reference()
 
         # sample the number of false positives
-        n_fp = max(min_select, int(self.rng.poisson(self.fp_poisson)))
+        n_fp = max(self.min_select, np.round(self.rng.poisson(self.fp_poisson)))
 
         # construct target positions
         targets = []
@@ -93,16 +99,16 @@ class FalsePositiveManifest(AdvManifest):
 
 @AVSEC.register_module()
 class FalseNegativeManifest(AdvManifest):
-    def __init__(self, fn_fraction: float, *args, **kwargs):
+    def __init__(self, fn_poisson: float, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fn_fraction = fn_fraction
+        self.fn_poisson = fn_poisson
 
-    def select(
-        self, objects: "DataContainer", min_select: int = 0, *args, **kwargs
-    ) -> List[TargetObject]:
+    def select(self, objects: "DataContainer", *args, **kwargs) -> List[TargetObject]:
         n_objects = len(objects)
-        n_fn = max(min_select, int(self.fn_fraction * n_objects))
-
+        n_fn = max(
+            self.min_select,
+            min(min(n_objects, self.max_select), self.rng.poisson(self.fn_poisson)),
+        )
         idx_targets = self.rng.choice(
             list(range(len(objects))), size=n_fn, replace=False
         )
@@ -112,5 +118,5 @@ class FalseNegativeManifest(AdvManifest):
 
 @AVSEC.register_module()
 class TranslationManifest(FalseNegativeManifest):
-    def __init__(self, tr_fraction: float, *args, **kwargs):
-        super().__init__(fn_fraction=tr_fraction, *args, **kwargs)
+    def __init__(self, tr_poisson: float, *args, **kwargs):
+        super().__init__(fn_poisson=tr_poisson, *args, **kwargs)

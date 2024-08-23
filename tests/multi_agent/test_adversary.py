@@ -54,8 +54,8 @@ def test_adversary_with_manifests_and_props():
     n_frames = 20
     manifests = [
         FalsePositiveManifest(fp_poisson=8),
-        FalseNegativeManifest(fn_fraction=0.5),
-        TranslationManifest(tr_fraction=0.5),
+        FalseNegativeManifest(fn_poisson=3),
+        TranslationManifest(tr_poisson=3),
     ]
     propagators = [
         StaticPropagator(),
@@ -126,7 +126,7 @@ def test_adv_translation():
     n_frames = 20
     adversary = AdversaryModel(
         propagator=StaticPropagator(),
-        manifest_tr=TranslationManifest(tr_fraction=0.5),
+        manifest_tr=TranslationManifest(tr_poisson=0.5),
         dt_init=dt_init,
     )
     # run over frames
@@ -149,7 +149,7 @@ def test_adv_translation():
 def test_parse_manifest():
     adversary = AdversaryModel(
         propagator=StaticPropagator(),
-        manifest=TranslationManifest(tr_fraction=0.5),
+        manifest=TranslationManifest(tr_poisson=0.5),
     )
     assert adversary.manifest_tr is not None
     assert adversary.manifest_fn is None

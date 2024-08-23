@@ -50,3 +50,14 @@ def test_trajectory_propagator():
         assert x_before[0] != obj.position.x[0]
         assert x_before[1] == obj.position.x[1]
         assert x_before[2] == obj.position.x[2]
+
+
+def test_trajectory_propagator_range():
+    propagator = TrajectoryPropagator(dr_total=20)
+    objs = random_objects()
+    for obj in objs:
+        x_before = obj.position.x.copy()
+        propagator.propagate(dt=1.0, obj=obj)
+        assert x_before[0] != obj.position.x[0]
+        assert x_before[1] != obj.position.x[1]
+        assert x_before[2] == obj.position.x[2]

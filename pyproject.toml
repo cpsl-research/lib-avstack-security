@@ -1,13 +1,13 @@
 
 [tool.poetry]
-name = "lib-avsec"
+name = "lib-avstack-security"
 version = "0.1.0-alpha.1"
 description = "Security analysis routines for autonomous vehicles"
 authors = ["Spencer Hallyburton <spencer.hallyburton@duke.edu>"]
 readme = "README.md"
 license = "MIT"
 homepage = "https://cpsl.pratt.duke.edu/"
-repository = "https://github.com/avstack-lab/lib-avsec"
+repository = "https://github.com/avstack-lab/lib-avstack-security"
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Science/Research",
@@ -21,8 +21,7 @@ numpy = "^1.19"
 scipy = "^1.8.0"
 
 # avstack dependences
-lib-avstack-core = { path = "submodules/lib-avstack-core", develop = true, optional=true}
-lib-avstack-api = { path = "submodules/lib-avstack-api", develop = true, optional=true}
+lib-avstack-core = { path = "third_party/lib-avstack-core", develop = true, optional=true}
 
 [tool.poetry.extras]
 avstack = ["lib-avstack-core", "lib-avstack-api"]

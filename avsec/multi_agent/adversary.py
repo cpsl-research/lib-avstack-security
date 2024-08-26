@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Union
 
 
 if TYPE_CHECKING:
-    from avstack.geometry import ReferenceFrame
+    from avstack.geometry import ReferenceFrame, Shape
     from .manifest import AdvManifest
     from .propagation import AdvPropagator
 
@@ -93,6 +93,7 @@ class AdversaryModel:
     def __call__(
         self,
         objects: "DataContainer",
+        fov: "Shape",
         reference: "ReferenceFrame",
         fn_dist_threshold: int = 6,
         threshold_obj_dist: float = 70.0,
@@ -121,7 +122,7 @@ class AdversaryModel:
             self._t_start = timestamp
         elif (timestamp - self._t_start) > self.dt_reset:
             self.reset()
-            return objects
+            return objects, fov
 
         # ===========================================
         # Data type conversions
@@ -229,7 +230,7 @@ class AdversaryModel:
         else:
             raise NotImplementedError(output_type)
 
-        return outputs
+        return outputs, fov
 
     def initialize_uncoordinated(
         self, objects: "DataContainer", reference: "ReferenceFrame"

@@ -42,7 +42,7 @@ class FalsePositiveManifest(AdvManifest):
     def __init__(
         self,
         fp_poisson: float,
-        x_sigma: float = 30,
+        x_sigma: float = 15,
         hwl: List[float] = [2, 2, 4],
         *args,
         **kwargs,
@@ -68,7 +68,12 @@ class FalsePositiveManifest(AdvManifest):
         reference_gp = reference.get_ground_projected_reference()
 
         # sample the number of false positives
-        n_fp = max(self.min_select, np.round(self.rng.poisson(self.fp_poisson)))
+        n_fp_poisson = (
+            np.round(self.rng.poisson(self.fp_poisson))
+            if self.fp_poisson is not None
+            else 0
+        )
+        n_fp = max(self.min_select, min(self.max_select, n_fp_poisson))
 
         # construct target positions
         targets = []

@@ -18,12 +18,15 @@ class AdvManifest:
     def __init__(
         self,
         seed: Union[int, None] = None,
+        n_select_poisson: Union[float, None] = None,
+        exact_select: Union[int, None] = None,
         min_select: int = 0,
         max_select: int = np.inf,
     ):
         self.rng = np.random.RandomState(seed)
-        self.min_select = min_select
-        self.max_select = max_select
+        self.n_select_poisson = n_select_poisson
+        self.min_select = min_select if exact_select is None else exact_select
+        self.max_select = max_select if exact_select is None else exact_select
 
     @property
     def rng(self) -> np.random.RandomState:
@@ -41,14 +44,12 @@ class AdvManifest:
 class FalsePositiveManifest(AdvManifest):
     def __init__(
         self,
-        fp_poisson: float,
         x_sigma: float = 15,
         hwl: List[float] = [2, 2, 4],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.fp_poisson = fp_poisson
         self.x_sigma = x_sigma
         self.hwl = hwl
 
@@ -69,8 +70,8 @@ class FalsePositiveManifest(AdvManifest):
 
         # sample the number of false positives
         n_fp_poisson = (
-            np.round(self.rng.poisson(self.fp_poisson))
-            if self.fp_poisson is not None
+            np.round(self.rng.poisson(self.n_select_poisson))
+            if self.n_select_poisson is not None
             else 0
         )
         n_fp = max(self.min_select, min(self.max_select, n_fp_poisson))
@@ -104,16 +105,18 @@ class FalsePositiveManifest(AdvManifest):
 
 @AVSEC.register_module()
 class FalseNegativeManifest(AdvManifest):
-    def __init__(self, fn_poisson: float, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.fn_poisson = fn_poisson
 
     def select(self, objects: "DataContainer", *args, **kwargs) -> List[TargetObject]:
-        n_objects = len(objects)
-        n_fn = max(
-            self.min_select,
-            min(min(n_objects, self.max_select), self.rng.poisson(self.fn_poisson)),
+        # sample the number of false negatives
+        n_fn_poisson = (
+            np.round(self.rng.poisson(self.n_select_poisson))
+            if self.n_select_poisson is not None
+            else 0
         )
+        n_objects = len(objects)
+        n_fn = min(n_objects, max(self.min_select, min(self.max_select, n_fn_poisson)))
         idx_targets = self.rng.choice(
             list(range(len(objects))), size=n_fn, replace=False
         )
@@ -123,5 +126,5 @@ class FalseNegativeManifest(AdvManifest):
 
 @AVSEC.register_module()
 class TranslationManifest(FalseNegativeManifest):
-    def __init__(self, tr_poisson: float, *args, **kwargs):
-        super().__init__(fn_poisson=tr_poisson, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)

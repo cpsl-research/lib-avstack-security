@@ -21,15 +21,19 @@ from .manifest import FalseNegativeManifest, FalsePositiveManifest, TranslationM
 class AdversaryModel:
     def __init__(
         self,
-        propagator: "AdvPropagator",
+        propagator: Union[ConfigDict, "AdvPropagator", None] = None,
         manifest_fp: Union[ConfigDict, "FalsePositiveManifest", None] = None,
         manifest_fn: Union[ConfigDict, "FalseNegativeManifest", None] = None,
         manifest_tr: Union[ConfigDict, "TranslationManifest", None] = None,
         manifest: Union[ConfigDict, "AdvManifest", None] = None,
         dt_init: float = 2.0,
         dt_reset: float = 10.0,
+        enabled: bool = True,
         seed: Union[int, None] = None,
     ):
+        # sometimes we may want to disable the adversary
+        self.enabled = enabled
+
         # parse the manifest
         if manifest is not None:
             if any(
@@ -116,6 +120,10 @@ class AdversaryModel:
         that is sufficiently close in space to the target and eliminate
         it from the outgoing message.
         """
+        # just jump right back if disabled
+        if not self.enabled:
+            return objects, fov
+
         # handle timing
         timestamp = objects.timestamp
         if self._t_start is None:
@@ -182,11 +190,14 @@ class AdversaryModel:
                     obj.position.distance(obj_fn.last_position, check_reference=False)
                     for obj in input_as_objects
                 ]
-                idx_select = np.argmin(dists)
-                if dists[idx_select] <= fn_dist_threshold:
-                    obj_fn.last_position = input_as_objects[idx_select].position
-                    # remove the ones that were assigned
-                    del input_as_objects[idx_select]
+                if len(dists) > 0:
+                    idx_select = np.argmin(dists)
+                    if dists[idx_select] <= fn_dist_threshold:
+                        obj_fn.last_position = input_as_objects[idx_select].position
+                        # remove the ones that were assigned
+                        del input_as_objects[idx_select]
+                else:
+                    pass
 
             # process translations
             for obj_tr in self.targets["translations"]:

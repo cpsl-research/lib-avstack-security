@@ -121,8 +121,9 @@ class AdversaryModel:
         it from the outgoing message.
         """
         # just jump right back if disabled
+        did_attack = False
         if not self.enabled:
-            return objects, fov
+            return objects, fov, did_attack
 
         # handle timing
         timestamp = objects.timestamp
@@ -130,7 +131,7 @@ class AdversaryModel:
             self._t_start = timestamp
         elif (timestamp - self._t_start) > self.dt_reset:
             self.reset()
-            return objects, fov
+            return objects, fov, set()
 
         # ===========================================
         # Data type conversions
@@ -150,10 +151,11 @@ class AdversaryModel:
         objs_as_states = [isinstance(obj, ObjectState) for obj in objects]
         objs_as_dets = [isinstance(obj, BoxDetection) for obj in objects]
 
-        if all(objs_as_states):
+        if len(objects) > 0 and all(objs_as_states):
             input_as_objects = objects
             output_type = "ObjectState"
         elif all(objs_as_dets):
+            # assume in detection format if no reference inputs (len == 0)
             input_as_objects = objects.apply_and_return(
                 detection_to_obj, timestamp=timestamp
             )
@@ -176,6 +178,8 @@ class AdversaryModel:
         # ===========================================
 
         if self.targets_initialized:
+            did_attack = True
+
             # process false positives
             for obj_fp in self.targets["false_positive"]:
                 obj_fp.change_reference(reference, inplace=True)
@@ -241,7 +245,7 @@ class AdversaryModel:
         else:
             raise NotImplementedError(output_type)
 
-        return outputs, fov
+        return outputs, fov, did_attack
 
     def initialize_uncoordinated(
         self, objects: "DataContainer", reference: "ReferenceFrame"

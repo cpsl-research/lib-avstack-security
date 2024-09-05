@@ -6,16 +6,13 @@ if TYPE_CHECKING:
     from avstack.geometry import ReferenceFrame
     from .propagation import AdvPropagator
 
-from copy import deepcopy
-
 from avstack.modules.perception.detections import BoxDetection
 from avstack.modules.tracking import BasicBoxTrack3D
 
 
 class TargetObject:
     def __init__(self, obj_state: "ObjectState"):
-        self._obj_state = obj_state
-        self._target_state = deepcopy(obj_state)
+        self._target_state = obj_state.deepcopy()
         self._propagation_model = None
         self._states_initialized = False
         self.last_position = obj_state.position
@@ -27,12 +24,11 @@ class TargetObject:
 
     @property
     def reference(self):
-        return self._obj_state.reference
+        return self._target_state.reference
 
     def change_reference(self, reference: "ReferenceFrame", inplace: bool):
         if reference != self.reference:
             if inplace:
-                self._obj_state.change_reference(reference=reference, inplace=True)
                 self._target_state.change_reference(reference=reference, inplace=True)
                 self.last_position.change_reference(reference=reference, inplace=True)
             else:

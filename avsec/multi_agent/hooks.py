@@ -40,13 +40,18 @@ class AdversaryHook:
             agent_name: agent's name
             sensor_name: sensor's name
         """
+        attacked_agents = set()
         if (agent_name, sensor_name) in self.models:
             n_before = len(detections)
-            detections, field_of_view = self.models[(agent_name, sensor_name)](
+            detections, field_of_view, did_attack = self.models[
+                (agent_name, sensor_name)
+            ](
                 objects=detections,
                 fov=field_of_view,
                 reference=reference,
             )
+            if did_attack:
+                attacked_agents.add(agent_name)
             n_after = len(detections)
             if self.verbose:
                 if logger is not None:
@@ -59,4 +64,4 @@ class AdversaryHook:
                         f"({agent_name}, {sensor_name}) not in models ({model_keys})"
                     )
 
-        return detections, field_of_view
+        return detections, field_of_view, attacked_agents

@@ -45,12 +45,14 @@ class FalsePositiveManifest(AdvManifest):
     def __init__(
         self,
         x_sigma: float = 15,
+        x_bias: float = 0,
         hwl: List[float] = [2, 2, 4],
         *args,
         **kwargs,
     ):
         super().__init__(*args, **kwargs)
-        self.x_sigma = x_sigma
+        self.x_sigma = np.asarray(x_sigma)
+        self.x_bias = np.asarray(x_bias)
         self.hwl = hwl
 
     def select(
@@ -80,7 +82,9 @@ class FalsePositiveManifest(AdvManifest):
         targets = []
         for i in range(n_fp):
             # get data -- flat on ground plane
-            x_vec = self.x_sigma * np.array([self.rng.randn(), self.rng.randn(), 0])
+            x_vec = self.x_bias + self.x_sigma * np.array(
+                [self.rng.randn(), self.rng.randn(), 0]
+            )
             q_vec = np.quaternion(1)  # identity until velocity set later
 
             # adjust for false positive selection that is coplanar with ground
@@ -105,8 +109,9 @@ class FalsePositiveManifest(AdvManifest):
 
 @AVSEC.register_module()
 class FalseNegativeManifest(AdvManifest):
-    def __init__(self, *args, **kwargs):
+    def __init__(self, max_range: float = 50, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.max_range = max_range
 
     def select(self, objects: "DataContainer", *args, **kwargs) -> List[TargetObject]:
         # sample the number of false negatives
@@ -115,12 +120,17 @@ class FalseNegativeManifest(AdvManifest):
             if self.n_select_poisson is not None
             else 0
         )
-        n_objects = len(objects)
+        objs_within_range = [
+            obj for obj in objects if obj.position.norm() < self.max_range
+        ]
+        n_objects = len(objs_within_range)
         n_fn = min(n_objects, max(self.min_select, min(self.max_select, n_fn_poisson)))
         idx_targets = self.rng.choice(
-            list(range(len(objects))), size=n_fn, replace=False
+            list(range(len(objs_within_range))), size=n_fn, replace=False
         )
-        targets = [TargetObject(obj_state=objects[idx]) for idx in idx_targets]
+        targets = [
+            TargetObject(obj_state=objs_within_range[idx]) for idx in idx_targets
+        ]
         return targets
 
 
